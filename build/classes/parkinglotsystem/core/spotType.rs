@@ -1,1 +1,0 @@
-parkinglotsystem.core.SpotType
