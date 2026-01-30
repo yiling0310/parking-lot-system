@@ -1,16 +1,19 @@
-# Build outputs
-/build/
-/dist/
-/out/
-target/
+# compiled output
+out/
+*.class
 
 # NetBeans
-/nbproject/
+nbproject/
+build/
+dist/
+target/
 *.form
-*.class
-*.rs
+*.mf
+build.xml
+manifest.mf
 
 # OS / IDE
 .vscode/
 .DS_Store
 Thumbs.db
+nul
