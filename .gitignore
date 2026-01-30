@@ -1,0 +1,16 @@
+# Build outputs
+/build/
+/dist/
+/out/
+target/
+
+# NetBeans
+/nbproject/
+*.form
+*.class
+*.rs
+
+# OS / IDE
+.vscode/
+.DS_Store
+Thumbs.db
