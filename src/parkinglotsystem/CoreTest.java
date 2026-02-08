@@ -1,15 +1,7 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package parkinglotsystem;
 
 import parkinglotsystem.core.*;
 
-/**
- * Simple test class to verify core logic works correctly.
- * This is NOT part of the final system, only for testing.
- */
 public class CoreTest {
 
     public static void main(String[] args) {
@@ -21,32 +13,44 @@ public class CoreTest {
         Floor floor1 = new Floor(1);
         Floor floor2 = new Floor(2);
 
-        // 3) Add parking spots to floors
-        floor1.addSpot(new ParkingSpot("F1-C1", SpotType.COMPACT));
-        floor1.addSpot(new ParkingSpot("F1-R1", SpotType.REGULAR));
-        floor1.addSpot(new ParkingSpot("F1-H1", SpotType.HANDICAPPED));
+        // 3) Create rows
+        Row f1r1 = new Row(1);
+        Row f1r2 = new Row(2);
 
-        floor2.addSpot(new ParkingSpot("F2-R1", SpotType.REGULAR));
-        floor2.addSpot(new ParkingSpot("F2-V1", SpotType.RESERVED));
+        Row f2r1 = new Row(1);
 
-        // 4) Add floors to parking lot
+        // 4) Add parking spots to rows (SpotId format can be anything, but keep consistent)
+        f1r1.addSpot(new ParkingSpot("F1-R1-S1", SpotType.COMPACT));
+        f1r1.addSpot(new ParkingSpot("F1-R1-S2", SpotType.REGULAR));
+        f1r2.addSpot(new ParkingSpot("F1-R2-S1", SpotType.HANDICAPPED));
+
+        f2r1.addSpot(new ParkingSpot("F2-R1-S1", SpotType.REGULAR));
+        f2r1.addSpot(new ParkingSpot("F2-R1-S2", SpotType.RESERVED));
+
+        // 5) Add rows to floors
+        floor1.addRow(f1r1);
+        floor1.addRow(f1r2);
+
+        floor2.addRow(f2r1);
+
+        // 6) Add floors to parking lot
         parkingLot.addFloor(floor1);
         parkingLot.addFloor(floor2);
 
-        // 5) Create vehicles
+        // 7) Create vehicles
         Vehicle car = new Vehicle("ABC123", VehicleType.CAR, false);
         Vehicle handicappedCar = new Vehicle("H999", VehicleType.HANDICAPPED, true);
 
-        // 6) Allocate vehicles to spots (Entry simulation)
-        // NOTE: We are not checking parking rules here (Member2 will handle that).
-        parkingLot.allocateSpot(floor1.getSpots().get(0), car);              // COMPACT spot
-        parkingLot.allocateSpot(floor1.getSpots().get(2), handicappedCar);   // HANDICAPPED spot (should be FREE)
+        // 8) Allocate vehicles to spots (Entry simulation)
+        // NOTE: Member2 will validate rules later. Here we just allocate.
+        parkingLot.allocateSpot(floor1.getSpots().get(0), car);              // first spot
+        parkingLot.allocateSpot(floor1.getSpots().get(2), handicappedCar);   // handicapped spot
 
-        // 7) Print overall parking status
+        // 9) Print overall parking status
         System.out.println("=== Parking Lot Status ===");
         System.out.println(parkingLot.getStatusSummary());
 
-        // 8) Print each floor and each spot details + hourly rate
+        // 10) Print each floor and each spot details + hourly rate
         for (Floor f : parkingLot.getFloors()) {
             System.out.println("\nFloor " + f.getFloorNumber()
                     + " occupancy: " + String.format("%.1f", f.getOccupancyRate() * 100) + "%");
@@ -56,10 +60,10 @@ public class CoreTest {
             }
         }
 
-        // 9) Release one vehicle (Exit simulation)
+        // 11) Release one vehicle (Exit simulation)
         parkingLot.releaseSpotByPlate("ABC123");
 
-        // 10) Print status after exit
+        // 12) Print status after exit
         System.out.println("\n=== After Vehicle Exit ===");
         System.out.println(parkingLot.getStatusSummary());
     }

@@ -1,79 +1,117 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package parkinglotsystem.admin;
-
-import parkinglotsystem.core.Floor;
-import parkinglotsystem.core.ParkingLot;
-import parkinglotsystem.core.ParkingSpot;
 
 import java.util.ArrayList;
 import java.util.List;
+import parkinglotsystem.core.Floor;
+import parkinglotsystem.core.ParkingLot;
+import parkinglotsystem.core.ParkingSpot;
+import parkinglotsystem.core.Vehicle;
 
-/**
- * AdminService provides read-only information for admin/reporting purposes.
- * UI should call this service instead of accessing core classes directly.
- */
+// Service class for providing admin-related data and operations
 public class AdminService {
 
+    // Data class used to store parking spot information for UI display
+    public static class SpotInfo {
+
+        // Floor number of the parking spot
+        public final int floorNo;
+
+        // Unique ID of the parking spot
+        public final String spotId;
+
+        // Type of the parking spot (REGULAR, COMPACT, etc.)
+        public final String type;
+
+        // Current status of the spot (AVAILABLE / OCCUPIED)
+        public final String status;
+
+        // Vehicle plate number or "-" if empty
+        public final String plateOrDash;
+
+        // Hourly parking rate
+        public final double hourlyRate;
+
+        // Constructor to initialize spot information
+        public SpotInfo(int floorNo, String spotId, String type, String status, String plateOrDash, double hourlyRate) {
+            this.floorNo = floorNo;
+            this.spotId = spotId;
+            this.type = type;
+            this.status = status;
+            this.plateOrDash = plateOrDash;
+            this.hourlyRate = hourlyRate;
+        }
+    }
+
+    // Reference to the main ParkingLot object
     private final ParkingLot parkingLot;
 
-    /**
-     * Create AdminService for a parking lot.
-     */
+    // Constructor to initialize AdminService with a ParkingLot instance
     public AdminService(ParkingLot parkingLot) {
-        if (parkingLot == null) {
+
+        // Ensure parking lot is not null
+        if (parkingLot == null)
             throw new IllegalArgumentException("parkingLot cannot be null");
-        }
+
         this.parkingLot = parkingLot;
     }
 
-    /**
-     * Get a summary string of the whole parking lot.
-     * Example: "Occupied=3/10 (30%)"
-     */
+    // Get overall parking lot summary information
     public String getSummary() {
         return parkingLot.getStatusSummary();
     }
 
-    /**
-     * Get overall occupancy rate (0.0 - 1.0).
-     */
+    // Get overall occupancy rate of the parking lot
     public double getOverallOccupancyRate() {
         return parkingLot.getOverallOccupancyRate();
     }
 
-    /**
-     * Get occupancy rate for each floor.
-     * Example output:
-     * "Floor 1: 40.0%"
-     */
+    // Get formatted occupancy information for each floor
     public List<String> getFloorOccupancyLines() {
+
         List<String> result = new ArrayList<>();
 
+        // Loop through all floors
         for (Floor floor : parkingLot.getFloors()) {
+
+            // Format occupancy percentage for display
             String line = "Floor " + floor.getFloorNumber()
                     + ": " + String.format("%.1f", floor.getOccupancyRate() * 100) + "%";
+
             result.add(line);
         }
+
         return result;
     }
 
-    /**
-     * List all parking spots in the parking lot.
-     * Used by Admin UI to display spot status.
-     */
-    public List<String> listAllSpots() {
-        List<String> result = new ArrayList<>();
+    // Get detailed information for all parking spots
+    public List<SpotInfo> getAllSpotInfos() {
 
+        List<SpotInfo> list = new ArrayList<>();
+
+        // Loop through each floor
         for (Floor floor : parkingLot.getFloors()) {
-            result.add("=== Floor " + floor.getFloorNumber() + " ===");
+
+            // Loop through each parking spot on the floor
             for (ParkingSpot spot : floor.getSpots()) {
-                result.add(spot.toString());
+
+                // Get the current vehicle (if any)
+                Vehicle v = spot.getCurrentVehicle();
+
+                // Get license plate or "-" if empty
+                String plate = (v == null) ? "-" : v.getLicensePlate();
+
+                // Create SpotInfo object and add to list
+                list.add(new SpotInfo(
+                        floor.getFloorNumber(),
+                        spot.getSpotId(),
+                        spot.getSpotType().name(),
+                        spot.getStatus().name(),
+                        plate,
+                        spot.getHourlyRate()
+                ));
             }
         }
-        return result;
+
+        return list;
     }
 }
-

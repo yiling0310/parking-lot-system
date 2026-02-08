@@ -1,86 +1,100 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package parkinglotsystem.core;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Represents one parking floor.
- * A floor contains multiple parking spots.
- */
+// Represents one floor in the parking lot
 public class Floor {
 
-    private final int floorNumber;                 // Floor identifier (e.g. 1, 2, 3)
-    private final List<ParkingSpot> spots;          // All parking spots on this floor
+    // Floor number (e.g. 1, 2, 3...)
+    private final int floorNumber;
 
-    /**
-     * Create a floor with a floor number.
-     */
+    // List of rows on this floor
+    private final List<Row> rows;
+
+    // Constructor to create a floor with a given floor number
     public Floor(int floorNumber) {
+
+        // Ensure floor number is valid
         if (floorNumber <= 0) {
             throw new IllegalArgumentException("floorNumber must be >= 1");
         }
+
         this.floorNumber = floorNumber;
-        this.spots = new ArrayList<>();
+
+        // Initialize row list
+        this.rows = new ArrayList<>();
     }
 
-    /**
-     * Get the floor number.
-     */
+    // Get the floor number
     public int getFloorNumber() {
         return floorNumber;
     }
 
-    /**
-     * Add a parking spot to this floor.
-     */
-    public void addSpot(ParkingSpot spot) {
-        if (spot == null) {
-            throw new IllegalArgumentException("spot cannot be null");
+    // Add a row to this floor
+    public void addRow(Row row) {
+
+        // Ensure row is not null
+        if (row == null) {
+            throw new IllegalArgumentException("row cannot be null");
         }
-        spots.add(spot);
+
+        rows.add(row);
     }
 
-    /**
-     * Get all parking spots on this floor (read-only list).
-     */
+    // Get all rows (read-only list)
+    public List<Row> getRows() {
+        return Collections.unmodifiableList(rows);
+    }
+
+    // Get all parking spots on this floor (flattened from all rows)
+    // Used mainly for admin listing and reporting
     public List<ParkingSpot> getSpots() {
-        return Collections.unmodifiableList(spots);
+
+        List<ParkingSpot> all = new ArrayList<>();
+
+        // Collect spots from each row
+        for (Row r : rows) {
+            all.addAll(r.getSpots());
+        }
+
+        return Collections.unmodifiableList(all);
     }
 
-    /**
-     * Get total number of parking spots on this floor.
-     */
+    // Get total number of parking spots on this floor
     public int getTotalSpots() {
-        return spots.size();
+
+        int total = 0;
+
+        // Sum up spots from all rows
+        for (Row r : rows)
+            total += r.getTotalSpots();
+
+        return total;
     }
 
-    /**
-     * Get number of occupied parking spots on this floor.
-     */
+    // Get number of occupied parking spots on this floor
     public int getOccupiedSpots() {
-        int count = 0;
-        for (ParkingSpot spot : spots) {
-            if (!spot.isAvailable()) {
-                count++;
-            }
-        }
-        return count;
+
+        int occupied = 0;
+
+        // Count occupied spots from all rows
+        for (Row r : rows)
+            occupied += r.getOccupiedSpots();
+
+        return occupied;
     }
 
-    /**
-     * Calculate occupancy rate for this floor.
-     * Example: 0.5 means 50% occupied.
-     */
+    // Calculate occupancy rate (occupied / total)
     public double getOccupancyRate() {
+
         int total = getTotalSpots();
-        if (total == 0) {
+
+        // Avoid division by zero
+        if (total == 0)
             return 0.0;
-        }
+
         return (double) getOccupiedSpots() / total;
     }
 }
