@@ -12,7 +12,8 @@ public class EntryPanel extends JPanel {
     // UI Components
     private final JTextField plateField = new JTextField(10);
     private final JComboBox<VehicleType> typeCombo = new JComboBox<>(VehicleType.values());
-    private final JCheckBox handiCheck = new JCheckBox("Handicapped Holder?");
+    
+    // Checkbox REMOVED. We rely on typeCombo now.
     
     private final JComboBox<String> spotCombo = new JComboBox<>(); // Populated after search
     private final JTextArea ticketArea = new JTextArea(6, 30);
@@ -25,7 +26,8 @@ public class EntryPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // 1. Top Panel: Vehicle Details
-        JPanel inputPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+        // Reduced rows from 4 to 3 since we removed the checkbox
+        JPanel inputPanel = new JPanel(new GridLayout(3, 2, 5, 5));
         inputPanel.setBorder(BorderFactory.createTitledBorder("Vehicle Entry"));
 
         inputPanel.add(new JLabel("License Plate:"));
@@ -33,9 +35,6 @@ public class EntryPanel extends JPanel {
 
         inputPanel.add(new JLabel("Vehicle Type:"));
         inputPanel.add(typeCombo);
-
-        inputPanel.add(new JLabel("")); // Spacer
-        inputPanel.add(handiCheck);
 
         JButton findBtn = new JButton("Find Available Spots");
         findBtn.addActionListener(e -> findSpots());
@@ -76,15 +75,15 @@ public class EntryPanel extends JPanel {
                 return;
             }
             
-            // Factory logic to create correct subclass based on selection
             VehicleType type = (VehicleType) typeCombo.getSelectedItem();
-            boolean isHandi = handiCheck.isSelected();
             Vehicle tempVehicle;
 
+            // Updated Logic: Standard vehicles are always 'false' for handicapped card.
+            // Only the "HANDICAPPED" type gets special privileges.
             switch (type) {
-                case CAR -> tempVehicle = new Car(plate, isHandi);
-                case MOTORCYCLE -> tempVehicle = new Motorcycle(plate, isHandi);
-                case SUV_TRUCK -> tempVehicle = new Suv(plate, isHandi);
+                case CAR -> tempVehicle = new Car(plate, false);
+                case MOTORCYCLE -> tempVehicle = new Motorcycle(plate, false);
+                case SUV_TRUCK -> tempVehicle = new Suv(plate, false);
                 case HANDICAPPED -> tempVehicle = new HandicappedVehicle(plate);
                 default -> throw new IllegalStateException("Unknown type");
             }
@@ -114,17 +113,16 @@ public class EntryPanel extends JPanel {
         try {
             String plate = plateField.getText();
             VehicleType type = (VehicleType) typeCombo.getSelectedItem();
-            boolean isHandi = handiCheck.isSelected();
             String spotId = (String) spotCombo.getSelectedItem();
 
             if (spotId == null) return;
 
-            // 1. Create the REAL vehicle object
+            // 1. Create the REAL vehicle object (Same logic as above)
             Vehicle vehicle;
             switch (type) {
-                case CAR -> vehicle = new Car(plate, isHandi);
-                case MOTORCYCLE -> vehicle = new Motorcycle(plate, isHandi);
-                case SUV_TRUCK -> vehicle = new Suv(plate, isHandi);
+                case CAR -> vehicle = new Car(plate, false);
+                case MOTORCYCLE -> vehicle = new Motorcycle(plate, false);
+                case SUV_TRUCK -> vehicle = new Suv(plate, false);
                 case HANDICAPPED -> vehicle = new HandicappedVehicle(plate);
                 default -> throw new IllegalStateException("Unexpected value: " + type);
             }

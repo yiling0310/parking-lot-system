@@ -29,30 +29,32 @@ public class EntryExitService {
 
     /**
      * Core Logic: Validates if a specific vehicle type can park in a specific spot type.
+     * UPDATED: Strict rules to ensure Handicapped vehicles get Free Parking.
      */
     public boolean isSpotSuitable(ParkingSpot spot, Vehicle vehicle) {
         SpotType sType = spot.getSpotType();
         VehicleType vType = vehicle.getVehicleType();
 
-        // Rule 1: Handicapped vehicles can park ANYWHERE
+        // Rule 1: HANDICAPPED Vehicles (from Dropdown)
+        // User Request: They can ONLY park in Handicapped spots.
+        // Reason: This ensures they always get the 0.00 rate (Free).
         if (vType == VehicleType.HANDICAPPED) {
-            return true; 
+            return sType == SpotType.HANDICAPPED;
         }
 
-        // Rule 2: Reserved spots are ONLY for Reserved vehicles (or specific logic if needed)
+        // Rule 2: Reserved spots are ONLY for Reserved vehicles (blocking others)
         if (sType == SpotType.RESERVED) {
-            return false; // Assuming normal vehicles cannot park in Reserved
+            return false; 
         }
 
-        // Rule 3: Type-specific matching [Requirement 2]
+        // Rule 3: Standard Vehicles (Car, Moto, SUV)
+        // They cannot park in Handicapped spots anymore (since checkbox is gone).
         return switch (vType) {
             case MOTORCYCLE -> sType == SpotType.COMPACT;
             case CAR -> sType == SpotType.COMPACT || sType == SpotType.REGULAR;
             case SUV_TRUCK -> sType == SpotType.REGULAR;
             default -> false;
-        }; // Motorcycle -> Compact only
-        // Car -> Compact OR Regular
-        // SUV -> Regular only
+        }; 
     }
 
     /**
