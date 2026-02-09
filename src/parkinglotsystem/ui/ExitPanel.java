@@ -16,6 +16,13 @@ public class ExitPanel extends JPanel {
     private final JButton payButton = new JButton("Pay & Exit Vehicle");
     private final JLabel statusLabel = new JLabel("Enter license plate to calculate bill.");
 
+    // NEW: Payment Method Selector
+    private final JComboBox<String> paymentMethodCombo = new JComboBox<>(new String[]{
+        "Cash Payment", 
+        "Credit/Debit Card", 
+        "E-Wallet / QR"
+    });
+
     // Store current calculation to prevent paying without calculating
     private Bill currentBill = null;
     private ParkingSpot currentSpot = null;
@@ -46,13 +53,20 @@ public class ExitPanel extends JPanel {
         billArea.setFont(new Font("Monospaced", Font.BOLD, 14));
         centerPanel.add(new JScrollPane(billArea), BorderLayout.CENTER);
 
-        // 3. Bottom Panel: Action
-        JPanel bottomPanel = new JPanel(new BorderLayout());
+        // 3. Bottom Panel: Action & Payment Method
+        JPanel bottomPanel = new JPanel(new BorderLayout(5, 5));
+        
+        // Payment Method Section
+        JPanel payMethodPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        payMethodPanel.add(new JLabel("Payment Method:"));
+        payMethodPanel.add(paymentMethodCombo);
+        
         payButton.setEnabled(false); // Disabled until bill is calculated
         payButton.setBackground(new Color(200, 255, 200)); // Light green
         payButton.addActionListener(e -> processPayment());
         
         bottomPanel.add(statusLabel, BorderLayout.NORTH);
+        bottomPanel.add(payMethodPanel, BorderLayout.CENTER); // Add dropdown
         bottomPanel.add(payButton, BorderLayout.SOUTH);
 
         add(topPanel, BorderLayout.NORTH);
@@ -79,8 +93,7 @@ public class ExitPanel extends JPanel {
             currentSpot = spotOpt.get();
             Vehicle vehicle = currentSpot.getCurrentVehicle();
             
-            // 2. Create a temporary 'Ticket' wrapper for the service.
-            // NOTE: We pass the ORIGINAL entry time to ensure correct duration calculation.
+            // 2. Create a temporary 'Ticket' wrapper
             Ticket tempTicket = new Ticket(vehicle, currentSpot, vehicle.getEntryTime());
 
             // 3. Calculate Bill
@@ -121,23 +134,24 @@ public class ExitPanel extends JPanel {
         if (currentBill == null || currentSpot == null) return;
 
         try {
+            String method = (String) paymentMethodCombo.getSelectedItem();
+            
             // 1. Confirm Payment
             int choice = JOptionPane.showConfirmDialog(this, 
-                "Confirm payment of RM " + String.format("%.2f", currentBill.totalAmount) + "?",
+                "Confirm payment of RM " + String.format("%.2f", currentBill.totalAmount) + "\nvia " + method + "?",
                 "Payment Processing",
                 JOptionPane.YES_NO_OPTION);
 
             if (choice == JOptionPane.YES_OPTION) {
                 
-                // 2. Process logic (Clear fines AND Add Revenue)
-                // UPDATED: Now passing the total amount to track revenue!
+                // 2. Process logic
                 paymentService.processPayment(currentBill.plate, currentBill.totalAmount);
                 
-                // 3. Release the spot (Physical exit)
+                // 3. Release the spot
                 parkingLot.releaseSpotByPlate(currentBill.plate);
 
                 // 4. Success Message
-                JOptionPane.showMessageDialog(this, "Payment Successful! Gate Opening...\nHave a nice day.");
+                JOptionPane.showMessageDialog(this, "Payment Successful via " + method + "!\nGate Opening...\nHave a nice day.");
 
                 // 5. Reset UI
                 plateField.setText("");
