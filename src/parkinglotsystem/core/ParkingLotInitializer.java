@@ -27,7 +27,8 @@ public class ParkingLotInitializer {
         }
 
         // Create parking lot instance
-        ParkingLot lot = new ParkingLot(name);
+        // Use Singleton Instance
+        ParkingLot lot = ParkingLot.getInstance(name);
 
         // Index used to cycle through spot type pattern
         int idx = 0;

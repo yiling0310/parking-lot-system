@@ -7,7 +7,7 @@ public class CoreTest {
     public static void main(String[] args) {
 
         // 1) Create parking lot
-        ParkingLot parkingLot = new ParkingLot("University Parking");
+        ParkingLot parkingLot = ParkingLot.getInstance("University Parking");
 
         // 2) Create floors
         Floor floor1 = new Floor(1);
@@ -38,8 +38,9 @@ public class CoreTest {
         parkingLot.addFloor(floor2);
 
         // 7) Create vehicles
-        Vehicle car = new Vehicle("ABC123", VehicleType.CAR, false);
-        Vehicle handicappedCar = new Vehicle("H999", VehicleType.HANDICAPPED, true);
+        // 7) Create vehicles (USING NEW SUBCLASSES)
+        Vehicle car = new Car("ABC123", false); 
+        Vehicle handicappedCar = new HandicappedVehicle("H999");
 
         // 8) Allocate vehicles to spots (Entry simulation)
         // NOTE: Member2 will validate rules later. Here we just allocate.
