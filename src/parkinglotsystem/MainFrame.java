@@ -4,8 +4,8 @@ import javax.swing.*;
 import parkinglotsystem.admin.AdminService;
 import parkinglotsystem.core.*; // Import ALL core classes (needed for SpotType/Initializer)
 import parkinglotsystem.ui.AdminPanel;
-import parkinglotsystem.ui.ExitPanel;
-import parkinglotsystem.ui.EntryPanel; // Make sure EntryPanel is imported!
+import parkinglotsystem.ui.EntryPanel;
+import parkinglotsystem.ui.ExitPanel; // Make sure EntryPanel is imported!
 
 public class MainFrame extends JFrame {
 
@@ -29,7 +29,7 @@ public class MainFrame extends JFrame {
     }
 
     public static void main(String[] args) {
-
+        DatabaseHandler.createNewTable();
         // --- 1. INITIALIZE DATA CORRECTLY ---
         // Define the parking spot pattern
         SpotType[] pattern = new SpotType[]{
@@ -45,6 +45,7 @@ public class MainFrame extends JFrame {
             "University Parking", 5, 3, 10, pattern
         );
 
+        DatabaseHandler.initializeSpots(lot);
         // --- 2. Create Services ---
         PaymentService payment = new PaymentService(); 
         EntryExitService entry = new EntryExitService(lot);

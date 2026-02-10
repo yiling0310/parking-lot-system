@@ -1,51 +1,56 @@
 package parkinglotsystem.core;
 
-// Represents a single parking spot in the parking lot
 public class ParkingSpot {
 
-    // Unique ID of the parking spot (e.g. F1-R1-S1)
     private final String spotId;
-
-    // Type of the parking spot (COMPACT / REGULAR / HANDICAPPED / RESERVED)
+    private final int floorNumber; 
+    private final int rowNumber;   
     private final SpotType spotType;
-
-    // Current status of the spot (AVAILABLE / OCCUPIED)
-    private SpotStatus status;
-
-    // Vehicle currently occupying this spot (null if empty)
+    //private SpotStatus status;
     private Vehicle currentVehicle;
+    private SpotStatus status = SpotStatus.AVAILABLE;
 
-    // Constructor to create a parking spot with ID and type
-    public ParkingSpot(String spotId, SpotType spotType) {
-
-        // Validate spot ID
-        if (spotId == null || spotId.isBlank()) {
-            throw new IllegalArgumentException("spotId cannot be empty");
-        }
-
-        // Validate spot type
-        if (spotType == null) {
-            throw new IllegalArgumentException("spotType cannot be null");
-        }
-
+    public ParkingSpot(String spotId, int floor, int row, SpotType type) {
         this.spotId = spotId;
-        this.spotType = spotType;
-
-        // Initialize spot as available
-        this.status = SpotStatus.AVAILABLE;
-
-        // No vehicle initially
-        this.currentVehicle = null;
+        this.floorNumber = floor;
+        this.rowNumber = row;
+        this.spotType = type;
     }
+    //     // Validate spot ID
+    //     if (spotId == null || spotId.isBlank()) {
+    //         throw new IllegalArgumentException("spotId cannot be empty");
+    //     }
+
+    //     // Validate spot type
+    //     if (spotType == null) {
+    //         throw new IllegalArgumentException("spotType cannot be null");
+    //     }
+
+    //     this.spotId = spotId;
+    //     this.spotType = spotType;
+
+    //     // Initialize spot as available
+    //     this.status = SpotStatus.AVAILABLE;
+
+    //     // No vehicle initially
+    //     this.currentVehicle = null;
+    // }
 
     // Get the parking spot ID
     public String getSpotId() {
         return spotId;
     }
 
-    // Get the parking spot type
     public SpotType getSpotType() {
         return spotType;
+    }
+
+    public int getFloorNumber() { 
+        return floorNumber; 
+    }
+
+    public int getRowNumber() { 
+        return rowNumber; 
     }
 
     // Get current status of the parking spot

@@ -20,7 +20,16 @@ public class ParkingLot {
     private final String name;
     private final List<Floor> floors;
     private final Map<String, ParkingSpot> plateToSpot;
+    
 
+    public List<ParkingSpot> getAllSpots() {
+        List<ParkingSpot> allSpots = new ArrayList<>();
+        for (Floor floor : floors) {
+  
+            allSpots.addAll(floor.getSpots());
+        }
+        return allSpots;
+    }
     /**
      * 2. PRIVATE Constructor.
      * Prevents other classes from using 'new ParkingLot()'.

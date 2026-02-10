@@ -39,12 +39,12 @@ public class EntryExitService {
         // User Request: They can ONLY park in Handicapped spots.
         // Reason: This ensures they always get the 0.00 rate (Free).
         if (vType == VehicleType.HANDICAPPED) {
-            return sType == SpotType.HANDICAPPED;
+            return true;
         }
 
         // Rule 2: Reserved spots are ONLY for Reserved vehicles (blocking others)
         if (sType == SpotType.RESERVED) {
-            return false; 
+            return true; 
         }
 
         // Rule 3: Standard Vehicles (Car, Moto, SUV)

@@ -1,7 +1,14 @@
 package parkinglotsystem.ui;
 
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import javax.swing.*;
+import parkinglotsystem.DatabaseHandler;
 import parkinglotsystem.core.*;
 import parkinglotsystem.core.PaymentService.Bill;
 
@@ -92,24 +99,32 @@ public class ExitPanel extends JPanel {
 
             currentSpot = spotOpt.get();
             Vehicle vehicle = currentSpot.getCurrentVehicle();
-            
-            // 2. Create a temporary 'Ticket' wrapper
+            LocalDateTime entryTime = vehicle.getEntryTime();
+            LocalDateTime exitTime = LocalDateTime.now(); 
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+            double unpaidFines = getPreviousFinesFromDB(plate);
+
             Ticket tempTicket = new Ticket(vehicle, currentSpot, vehicle.getEntryTime());
 
-            // 3. Calculate Bill
             currentBill = paymentService.calculateBill(tempTicket, currentSpot);
 
-            // 4. Display Bill
+            double grandTotal = currentBill.totalAmount + unpaidFines;
+           
             StringBuilder sb = new StringBuilder();
-            sb.append("=== PARKING RECEIPT ===\n");
-            sb.append(String.format("Plate:       %s\n", currentBill.plate));
+            sb.append("=== PAYMENT SUMMARY ===\n\n");
+            sb.append(String.format("Plate: %s (%s)\n", currentBill.plate, vehicle.getClass().getSimpleName()));
+            sb.append("-------------------------------\n");
+            sb.append(String.format("Entry Time  : %s\n", entryTime.format(fmt)));
+            sb.append(String.format("Exit Time   : %s\n", exitTime.format(fmt)));
+            sb.append("-------------------------------\n");
             sb.append(String.format("Total Hours: %d hrs\n", currentBill.hours));
             sb.append(String.format("Hourly Rate: RM %.2f\n", currentSpot.getHourlyRate()));
             sb.append("-----------------------\n");
             sb.append(String.format("Parking Fee: RM %.2f\n", currentBill.parkingFee));
             
             if (currentBill.currentFine > 0) {
-                sb.append(String.format("Overstay Fine: RM %.2f\n", currentBill.currentFine));
+                sb.append(String.format("Current Fine: RM %.2f\n", currentBill.currentFine));
             }
             if (currentBill.previousFines > 0) {
                 sb.append(String.format("Unpaid Fines:  RM %.2f\n", currentBill.previousFines));
@@ -120,7 +135,6 @@ public class ExitPanel extends JPanel {
             
             billArea.setText(sb.toString());
             
-            // Enable Pay Button
             payButton.setEnabled(true);
             statusLabel.setText("Please collect payment of RM " + String.format("%.2f", currentBill.totalAmount));
 
@@ -136,34 +150,100 @@ public class ExitPanel extends JPanel {
         try {
             String method = (String) paymentMethodCombo.getSelectedItem();
             
-            // 1. Confirm Payment
-            int choice = JOptionPane.showConfirmDialog(this, 
-                "Confirm payment of RM " + String.format("%.2f", currentBill.totalAmount) + "\nvia " + method + "?",
-                "Payment Processing",
-                JOptionPane.YES_NO_OPTION);
+            String input = JOptionPane.showInputDialog(this, 
+                "Total Amount Due: RM " + String.format("%.2f", currentBill.totalAmount) + 
+                "\nEnter Amount Paid:");
 
-            if (choice == JOptionPane.YES_OPTION) {
+            if (input == null) return; // User cancelled
+            double amountPaid = Double.parseDouble(input);
+
+            currentBill.amountPaid = amountPaid;
+            currentBill.method = method;
+            double remaining = Math.max(0, currentBill.totalAmount - amountPaid);
                 
-                // 2. Process logic
-                paymentService.processPayment(currentBill.plate, currentBill.totalAmount);
-                
-                // 3. Release the spot
-                parkingLot.releaseSpotByPlate(currentBill.plate);
+            syncPaymentToDB(currentBill.plate, currentSpot.getSpotId(), amountPaid, currentBill.totalAmount);   
 
-                // 4. Success Message
-                JOptionPane.showMessageDialog(this, "Payment Successful via " + method + "!\nGate Opening...\nHave a nice day.");
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            StringBuilder receipt = new StringBuilder();
 
-                // 5. Reset UI
-                plateField.setText("");
-                billArea.setText("");
-                payButton.setEnabled(false);
-                statusLabel.setText("Enter license plate to calculate bill.");
-                currentBill = null;
-                currentSpot = null;
-            }
+            receipt.append("===============================\n");
+            receipt.append("       OFFICIAL RECEIPT        \n");
+            receipt.append("===============================\n");
+            receipt.append(String.format("Plate No    : %s\n", currentBill.plate));
+            receipt.append(String.format("Entry Time  : %s\n", currentSpot.getCurrentVehicle().getEntryTime().format(fmt)));
+            receipt.append(String.format("Exit Time   : %s\n", LocalDateTime.now().format(fmt)));
+            receipt.append(String.format("Duration    : %d hours\n", currentBill.hours));
+            receipt.append("-------------------------------\n");
+            receipt.append(String.format("Fee Breakdown: %d hrs x RM %.2f\n", currentBill.hours, currentSpot.getHourlyRate()));
+            receipt.append(String.format("Parking Fee : RM %.2f\n", currentBill.parkingFee));
+            receipt.append(String.format("Fines Due   : RM %.2f\n", currentBill.currentFine + currentBill.previousFines));
+            receipt.append("-------------------------------\n");
+            receipt.append(String.format("TOTAL DUE   : RM %.2f\n", currentBill.totalAmount));
+            receipt.append(String.format("PAY METHOD  : %s\n", currentBill.method));
+            receipt.append(String.format("AMOUNT PAID : RM %.2f\n", currentBill.amountPaid));
+            receipt.append(String.format("REMAINING   : RM %.2f\n", remaining));
+            receipt.append("===============================\n");
+
+            billArea.setText(receipt.toString()); 
+
+            parkingLot.releaseSpotByPlate(currentBill.plate);
+            JOptionPane.showMessageDialog(this, "Transaction Complete. Remaining Balance: RM " + String.format("%.2f", remaining));
+
+            payButton.setEnabled(false);
+            currentBill = null;
 
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Payment Failed: " + ex.getMessage());
+        }
+    }
+
+    public double getPreviousFinesFromDB(String plate) {
+        double totalFine = 0;
+        String sql = "SELECT SUM(amount) FROM parking_fines WHERE plate_number = ? AND status = 'Unpaid'";
+        try (Connection conn = DatabaseHandler.connect();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, plate);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                totalFine = rs.getDouble(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace(); 
+        }
+        return totalFine;
+    }
+
+    private void syncPaymentToDB(String plate, String spotId, double paid, double due) {
+        try (Connection conn = DatabaseHandler.connect()) {
+            conn.setAutoCommit(false); 
+
+            try (PreparedStatement ps1 = conn.prepareStatement("UPDATE parking_spots SET status = 'Available' WHERE spot_id = ?")) {
+                ps1.setString(1, spotId);
+                ps1.executeUpdate();
+            }
+
+            try (PreparedStatement ps2 = conn.prepareStatement("UPDATE parking_tickets SET exit_time = CURRENT_TIMESTAMP, status = 'Paid' WHERE plate_number = ? AND status = 'Active'")) {
+                ps2.setString(1, plate);
+                ps2.executeUpdate();
+            }
+
+            if (paid < due) {
+                try (PreparedStatement ps3 = conn.prepareStatement("INSERT INTO parking_fines (plate_number, amount, status) VALUES (?, ?, 'Unpaid')")) {
+                    ps3.setString(1, plate);
+                    ps3.setDouble(2, due - paid);
+                    ps3.executeUpdate();
+                }
+            }
+            
+            try (PreparedStatement ps4 = conn.prepareStatement("UPDATE parking_fines SET status = 'Paid' WHERE plate_number = ? AND status = 'Unpaid' AND amount <= ?")) {
+                ps4.setString(1, plate);
+                ps4.setDouble(2, paid); 
+                ps4.executeUpdate();
+            }
+
+            conn.commit(); 
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 }

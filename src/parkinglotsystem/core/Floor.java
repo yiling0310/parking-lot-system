@@ -9,22 +9,16 @@ public class Floor {
 
     // Floor number (e.g. 1, 2, 3...)
     private final int floorNumber;
-
-    // List of rows on this floor
-    private final List<Row> rows;
+    private final List<Row> rows = new ArrayList<>(); 
+    private final List<ParkingSpot> spots = new ArrayList<>();
 
     // Constructor to create a floor with a given floor number
     public Floor(int floorNumber) {
-
-        // Ensure floor number is valid
-        if (floorNumber <= 0) {
-            throw new IllegalArgumentException("floorNumber must be >= 1");
-        }
-
         this.floorNumber = floorNumber;
+    }
 
-        // Initialize row list
-        this.rows = new ArrayList<>();
+    public void addSpot(ParkingSpot spot) {
+        spots.add(spot);
     }
 
     // Get the floor number

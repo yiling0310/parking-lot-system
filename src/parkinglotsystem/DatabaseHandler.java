@@ -1,6 +1,8 @@
 package parkinglotsystem;
 
 import java.sql.*;
+import parkinglotsystem.core.ParkingLot;
+import parkinglotsystem.core.ParkingSpot;
 
 public class DatabaseHandler {
     private static final String URL = "jdbc:sqlite:parking_system.db";
@@ -19,7 +21,8 @@ public class DatabaseHandler {
         // 1. VEHICLES TABLE
         String sqlVehicles = "CREATE TABLE IF NOT EXISTS vehicles (\n"
                 + " plate_number text PRIMARY KEY,\n"
-                + " vehicle_type text NOT NULL\n"
+                + " vehicle_type text NOT NULL,\n"
+                + " has_handicapped_card integer DEFAULT 0\n" 
                 + ");";
 
         // 2. PARKING_SPOTS TABLE
@@ -35,7 +38,7 @@ public class DatabaseHandler {
         // 3. PARKING_TICKETS TABLE
         //-- Format: T-PLATE-TIMESTAMP
         String sqlTickets = "CREATE TABLE IF NOT EXISTS parking_tickets (\n"
-                + " ticket_id integer PRIMARY KEY AUTOINCREMENT,\n"
+                + " ticket_id text PRIMARY KEY,\n"
                 + " plate_number text NOT NULL,\n"
                 + " spot_id text NOT NULL,\n"
                 + " entry_time datetime DEFAULT CURRENT_TIMESTAMP,\n"
@@ -60,8 +63,30 @@ public class DatabaseHandler {
             stmt.execute(sqlVehicles);
             stmt.execute(sqlSpots);
             stmt.execute(sqlTickets);
+            stmt.execute(sqlFines); 
         } catch (SQLException e) {
             System.out.println("Table Creation Error: " + e.getMessage());
+        }
+    }
+
+    public static void initializeSpots(ParkingLot lot) {
+        String sql = "INSERT OR IGNORE INTO parking_spots (spot_id, floor, row, spot_type, status, hours_rate) VALUES (?, ?, ?, ?, 'Available', ?)";
+        
+        try (Connection conn = connect();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            for (ParkingSpot spot : lot.getAllSpots()) {
+                pstmt.setString(1, spot.getSpotId());
+                pstmt.setInt(2, spot.getFloorNumber());
+                pstmt.setInt(3, spot.getRowNumber());
+                pstmt.setString(4, spot.getSpotType().name());
+                pstmt.setDouble(5, spot.getHourlyRate());
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+            System.out.println("Database spots initialized!");
+        } catch (SQLException e) {
+            System.out.println("Error initializing spots: " + e.getMessage());
         }
     }
 }

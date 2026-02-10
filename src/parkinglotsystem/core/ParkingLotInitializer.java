@@ -54,7 +54,7 @@ public class ParkingLotInitializer {
                     String spotId = "F" + f + "-R" + r + "-S" + s;
 
                     // Create parking spot
-                    ParkingSpot spot = new ParkingSpot(spotId, type);
+                    ParkingSpot spot = new ParkingSpot(spotId, f, r, type);
 
                     // Add spot to row
                     row.addSpot(spot);

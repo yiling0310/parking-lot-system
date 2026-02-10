@@ -16,9 +16,7 @@ public class PaymentService {
     // Current fine scheme selected by Admin (Default to FIXED)
     private FineType currentFineScheme = FineType.FIXED;
 
-    /**
-     * Admin can change the fine scheme here.
-     */
+
     public void setFineScheme(FineType fineType) {
         this.currentFineScheme = fineType;
     }
@@ -27,17 +25,14 @@ public class PaymentService {
         return currentFineScheme;
     }
 
-    /**
-     * Get total revenue for Admin Dashboard.
-     */
+ 
     public double getTotalRevenue() {
         return totalRevenue;
     }
 
-    /**
-     * Core Method: Calculates the total bill for a vehicle exiting NOW.
-     */
+
     public Bill calculateBill(Ticket ticket, ParkingSpot spot) {
+        Vehicle vehicle = ticket.getVehicle();
         LocalDateTime entry = ticket.getEntryTime();
         LocalDateTime exit = LocalDateTime.now();
         
@@ -50,6 +45,11 @@ public class PaymentService {
         
         // 3. Calculate Fine (if overstaying > 24 hours)
         double currentFine = calculateOverstayFine(hours);
+
+        double reservationFine = 0.0;
+        if (spot.getSpotType() == SpotType.RESERVED) {
+            reservationFine = 50.0; 
+        }
         
         // 4. Check for previous unpaid fines
         double previousFines = outstandingFinesDB.getOrDefault(ticket.getLicensePlate(), 0.0);
@@ -57,21 +57,19 @@ public class PaymentService {
         return new Bill(ticket.getLicensePlate(), hours, parkingFee, currentFine, previousFines);
     }
     
-    /**
-     * Process Payment: Clears fines, saves transaction, and updates Revenue.
-     * UPDATED to accept amountPaid.
-     */
-    public void processPayment(String licensePlate, double amountPaid) {
-        // Add to total revenue
+  
+    public void processPayment(String licensePlate, double amountPaid, double totalDue) {
         this.totalRevenue += amountPaid;
         
-        // Remove any outstanding fines since they are now paid
-        outstandingFinesDB.remove(licensePlate);
+        if (amountPaid < totalDue) {
+            double remainingFine = totalDue - amountPaid;
+            outstandingFinesDB.put(licensePlate, remainingFine);
+        } else {
+            outstandingFinesDB.remove(licensePlate);
+        }
     }
     
-    /**
-     * Helper: Ceil Rounding for hours (e.g., 1.1 hours -> 2 hours)
-     */
+    //routing hours
     private long calculateHours(LocalDateTime start, LocalDateTime end) {
         Duration duration = Duration.between(start, end);
         long minutes = duration.toMinutes();
@@ -81,10 +79,7 @@ public class PaymentService {
         return (minutes + 59) / 60;
     }
 
-    /**
-     * Helper: Calculates fine based on the selected Admin Scheme.
-     * Rules from Assignment PDF Section 4.
-     */
+    
     private double calculateOverstayFine(long hours) {
         if (hours <= 24) return 0.0; // No fine if within 24 hours
         
@@ -92,19 +87,12 @@ public class PaymentService {
         
         switch (currentFineScheme) {
             case FIXED:
-                // Option A: Flat RM 50
                 return 50.0;
                 
             case HOURLY:
-                // Option C: RM 20 per overstay hour
                 return overstayHours * 20.0;
                 
             case PROGRESSIVE:
-                // Option B: Progressive tiers
-                // First 24h overstay (hrs 24-48): RM 50
-                // Next 24h overstay (hrs 48-72): + RM 100
-                // Beyond 72h: + RM 150
-                
                 double fine = 50.0; // Base fine for breaking 24h limit
                 
                 if (hours > 48) {
@@ -112,6 +100,9 @@ public class PaymentService {
                 }
                 if (hours > 72) {
                     fine += 150.0; // Add RM 150
+                }
+                if (hours > 92) {
+                    fine += 200.0; // Add RM 150
                 }
                 return fine;
                 
@@ -130,6 +121,8 @@ public class PaymentService {
         public final double currentFine;
         public final double previousFines;
         public final double totalAmount;
+        public double amountPaid; 
+        public String method;     
 
         public Bill(String plate, long hours, double parkingFee, double currentFine, double previousFines) {
             this.plate = plate;
@@ -138,6 +131,8 @@ public class PaymentService {
             this.currentFine = currentFine;
             this.previousFines = previousFines;
             this.totalAmount = parkingFee + currentFine + previousFines;
+            this.amountPaid = 0.0;
+            this.method = "N/A";
         }
     }
 }
