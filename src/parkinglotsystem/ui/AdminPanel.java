@@ -6,6 +6,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import parkinglotsystem.admin.AdminService;
 import parkinglotsystem.core.FineType;
+import parkinglotsystem.core.SpotType;
 
 public class AdminPanel extends JPanel {
 
@@ -14,6 +15,7 @@ public class AdminPanel extends JPanel {
     // UI Components
     private final JLabel summaryLabel = new JLabel("-");
     private final JLabel revenueLabel = new JLabel("RM 0.00"); // NEW: Revenue Display
+    private final JLabel finesLabel = new JLabel("Unpaid Fines: RM 0.00");
     private final JComboBox<FineType> fineSchemeCombo = new JComboBox<>(FineType.values()); // NEW: Fine Selector
     
     private final JTextArea floorArea = new JTextArea(6, 30);
@@ -49,22 +51,32 @@ public class AdminPanel extends JPanel {
     }
 
     private JComponent buildTop() {
-        JPanel top = new JPanel(new GridLayout(1, 3, 10, 0)); // Grid for 3 boxes
+        JPanel top = new JPanel(new GridLayout(1, 3, 10, 0));
 
         // Box 1: General Summary
         JPanel summaryBox = new JPanel(new BorderLayout(8, 8));
         summaryBox.setBorder(BorderFactory.createTitledBorder("Occupancy Summary"));
         summaryBox.add(summaryLabel, BorderLayout.CENTER);
 
-        // Box 2: Financials (NEW)
-        JPanel financeBox = new JPanel(new BorderLayout(8, 8));
-        financeBox.setBorder(BorderFactory.createTitledBorder("Total Revenue"));
+        // Box 2: Financials (UPDATED)
+        JPanel financeBox = new JPanel(new GridLayout(2, 1, 5, 5)); // <--- CHANGE to GridLayout
+        financeBox.setBorder(BorderFactory.createTitledBorder("Financials")); // Rename title if you want
+        
+        // Style the Revenue Label
         revenueLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
-        revenueLabel.setForeground(new Color(0, 100, 0)); // Dark Green
-        financeBox.add(revenueLabel, BorderLayout.CENTER);
+        revenueLabel.setForeground(new Color(0, 100, 0)); // Green
+        revenueLabel.setBorder(BorderFactory.createTitledBorder("Total Revenue")); // Optional: Add mini-border
+        
+        // Style the Fines Label
+        finesLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        finesLabel.setForeground(Color.RED); // Red for debt
+        finesLabel.setBorder(BorderFactory.createTitledBorder("Unpaid Fines")); // Optional: Add mini-border
 
-        // Box 3: Settings & Actions (NEW)
-        JPanel settingsBox = new JPanel(new GridLayout(2, 1, 5, 5));
+        financeBox.add(revenueLabel); // <--- ADD revenue
+        financeBox.add(finesLabel);   // <--- ADD fines
+
+        // Box 3: Settings & Actions (UPDATED)
+        JPanel settingsBox = new JPanel(new GridLayout(3, 1, 5, 5)); // <--- CHANGE rows to 3
         settingsBox.setBorder(BorderFactory.createTitledBorder("Admin Settings"));
         
         JPanel schemePanel = new JPanel(new BorderLayout());
@@ -74,7 +86,12 @@ public class AdminPanel extends JPanel {
         JButton refreshBtn = new JButton("Refresh Data");
         refreshBtn.addActionListener(e -> refresh());
 
+        // Feature 1 Fix: Add Manage Button
+        JButton manageBtn = new JButton("Manage Structure");  // <--- ADD THIS
+        manageBtn.addActionListener(e -> showManagementDialog()); // <--- ADD THIS
+
         settingsBox.add(schemePanel);
+        settingsBox.add(manageBtn); // <--- Add to panel
         settingsBox.add(refreshBtn);
 
         top.add(summaryBox);
@@ -102,10 +119,13 @@ public class AdminPanel extends JPanel {
 
     public final void refresh() {
         // 1. Update Summary Text
-        summaryLabel.setText(adminService.getSummary());
+       summaryLabel.setText(adminService.getSummary());
 
-        // 2. Update Revenue (NEW)
+        // 2. Update Revenue 
         revenueLabel.setText(adminService.getTotalRevenueString());
+
+        // 3. Update Fines 
+        finesLabel.setText(adminService.getTotalUnpaidFinesString());
 
         // 3. Floor occupancy
         List<String> lines = adminService.getFloorOccupancyLines();
@@ -126,4 +146,38 @@ public class AdminPanel extends JPanel {
             });
         }
     }
+    private void showManagementDialog() {
+        String[] options = {"Add Floor", "Add Spot"};
+        int choice = JOptionPane.showOptionDialog(this, "What would you like to add?", 
+                "Manage Structure", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, 
+                null, options, options[0]);
+
+        try {
+            if (choice == 0) { // Add Floor
+                String input = JOptionPane.showInputDialog("Enter New Floor Number:");
+                if (input != null) {
+                    adminService.createNewFloor(Integer.parseInt(input));
+                    refresh();
+                    JOptionPane.showMessageDialog(this, "Floor added successfully!");
+                }
+            } else if (choice == 1) { // Add Spot
+                String floorStr = JOptionPane.showInputDialog("Enter Floor Number:");
+                String spotId = JOptionPane.showInputDialog("Enter Spot ID (e.g., 1-A):");
+                
+                // Dropdown for Spot Type
+                SpotType type = (SpotType) JOptionPane.showInputDialog(this, "Select Type", "Type", 
+                        JOptionPane.QUESTION_MESSAGE, null, SpotType.values(), SpotType.REGULAR);
+                
+                if (floorStr != null && spotId != null && type != null) {
+                     // Default rate 5.0, you can change this if needed
+                     adminService.createNewSpot(Integer.parseInt(floorStr), spotId, type, 5.0); 
+                     refresh();
+                     JOptionPane.showMessageDialog(this, "Spot added successfully!");
+                }
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
+        }
+    }
+    
 }

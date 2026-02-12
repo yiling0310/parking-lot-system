@@ -4,91 +4,68 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-// Represents one floor in the parking lot
 public class Floor {
 
-    // Floor number (e.g. 1, 2, 3...)
     private final int floorNumber;
     private final List<Row> rows = new ArrayList<>(); 
-    private final List<ParkingSpot> spots = new ArrayList<>();
+    // This is the ONLY list for admin-added spots
+    private final List<ParkingSpot> directSpots = new ArrayList<>(); 
 
-    // Constructor to create a floor with a given floor number
     public Floor(int floorNumber) {
         this.floorNumber = floorNumber;
     }
 
+    // Add a spot directly (Admin feature)
     public void addSpot(ParkingSpot spot) {
-        spots.add(spot);
+        if (spot == null) return;
+        directSpots.add(spot);
     }
 
-    // Get the floor number
     public int getFloorNumber() {
         return floorNumber;
     }
 
-    // Add a row to this floor
     public void addRow(Row row) {
-
-        // Ensure row is not null
-        if (row == null) {
-            throw new IllegalArgumentException("row cannot be null");
-        }
-
+        if (row == null) throw new IllegalArgumentException("row cannot be null");
         rows.add(row);
     }
 
-    // Get all rows (read-only list)
     public List<Row> getRows() {
         return Collections.unmodifiableList(rows);
     }
 
-    // Get all parking spots on this floor (flattened from all rows)
-    // Used mainly for admin listing and reporting
+    // COMBINE spots from Rows + Admin-added spots
     public List<ParkingSpot> getSpots() {
-
         List<ParkingSpot> all = new ArrayList<>();
-
-        // Collect spots from each row
+        
+        // 1. Get spots from Rows
         for (Row r : rows) {
             all.addAll(r.getSpots());
         }
+        // 2. Get spots added directly
+        all.addAll(directSpots);
 
         return Collections.unmodifiableList(all);
     }
 
-    // Get total number of parking spots on this floor
     public int getTotalSpots() {
-
         int total = 0;
-
-        // Sum up spots from all rows
-        for (Row r : rows)
-            total += r.getTotalSpots();
-
+        for (Row r : rows) total += r.getTotalSpots();
+        total += directSpots.size(); // Add direct spots
         return total;
     }
 
-    // Get number of occupied parking spots on this floor
     public int getOccupiedSpots() {
-
         int occupied = 0;
-
-        // Count occupied spots from all rows
-        for (Row r : rows)
-            occupied += r.getOccupiedSpots();
-
+        for (Row r : rows) occupied += r.getOccupiedSpots();
+        for (ParkingSpot s : directSpots) {
+            if (!s.isAvailable()) occupied++;
+        }
         return occupied;
     }
 
-    // Calculate occupancy rate (occupied / total)
     public double getOccupancyRate() {
-
         int total = getTotalSpots();
-
-        // Avoid division by zero
-        if (total == 0)
-            return 0.0;
-
-        return (double) getOccupiedSpots() / total;
+        return (total == 0) ? 0.0 : (double) getOccupiedSpots() / total;
     }
 }

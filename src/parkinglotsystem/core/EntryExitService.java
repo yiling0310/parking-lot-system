@@ -61,6 +61,9 @@ public class EntryExitService {
      * Process Entry: Validates, Parks, and Generates Ticket.
      */
     public Ticket parkVehicle(String spotId, Vehicle vehicle) {
+        if (parkingLot.findSpotByPlate(vehicle.getLicensePlate()).isPresent()) {
+        throw new IllegalArgumentException("Vehicle with plate " + vehicle.getLicensePlate() + " is already parked!");
+    }
         // 1. Find the spot object
         ParkingSpot spot = findSpotById(spotId);
         
@@ -76,7 +79,13 @@ public class EntryExitService {
         vehicle.setEntryTime(java.time.LocalDateTime.now());
 
         // 5. Generate Ticket
-        return new Ticket(vehicle, spot);
+        Ticket ticket = new Ticket(vehicle, spot);
+
+        // --- NEW: Save Ticket to Database (Persistence for Feature 2) ---
+        parkinglotsystem.DatabaseHandler.saveTicket(ticket);
+        // ----------------------------------------------------------------
+
+        return ticket;
     }
     
     // Helper to find a spot object by its String ID

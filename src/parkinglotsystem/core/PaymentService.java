@@ -2,137 +2,78 @@ package parkinglotsystem.core;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import parkinglotsystem.DatabaseHandler;
 
 public class PaymentService {
 
-    // Simulating a database of unpaid fines (License Plate -> Amount Owed)
-    private static final Map<String, Double> outstandingFinesDB = new HashMap<>();
-    
-    // Total Revenue collected (Parking Fees + Fines)
-    private double totalRevenue = 0.0;
-    
-    // Current fine scheme selected by Admin (Default to FIXED)
-    private FineType currentFineScheme = FineType.FIXED;
+    // Default to FIXED_PENALTY as per Feature 3 requirements
+    private FineType currentFineScheme = FineType.FIXED_PENALTY;
+    private static final double FIXED_FINE_AMOUNT = 50.0;
+    private static final long OVERSTAY_LIMIT_HOURS = 24;
 
-
-    public void setFineScheme(FineType fineType) {
-        this.currentFineScheme = fineType;
+    // --- METHODS FOR ADMIN PANEL UI ---
+    public void setFineScheme(FineType type) {
+        this.currentFineScheme = type;
+        System.out.println("Fine Scheme updated to: " + type);
     }
 
     public FineType getCurrentFineScheme() {
         return currentFineScheme;
     }
 
- 
     public double getTotalRevenue() {
-        return totalRevenue;
+        return DatabaseHandler.getTotalRevenue();
     }
+    // ----------------------------------
 
+    public Bill generateBill(Ticket tempTicket) {
+        if (tempTicket == null) throw new IllegalArgumentException("Ticket cannot be null");
 
-    public Bill calculateBill(Ticket ticket, ParkingSpot spot) {
-        Vehicle vehicle = ticket.getVehicle();
-        LocalDateTime entry = ticket.getEntryTime();
-        LocalDateTime exit = LocalDateTime.now();
+        String plate = tempTicket.getVehicle().getLicensePlate();
+        String realTicketId = DatabaseHandler.getActiveTicketId(plate);
         
-        // 1. Calculate Duration (Rounded UP to nearest hour)
-        long hours = calculateHours(entry, exit);
-        
-        // 2. Calculate Parking Fee (Rate * Hours)
-        double hourlyRate = spot.getHourlyRate();
-        double parkingFee = hourlyRate * hours;
-        
-        // 3. Calculate Fine (if overstaying > 24 hours)
-        double currentFine = calculateOverstayFine(hours);
-
-        double reservationFine = 0.0;
-        if (spot.getSpotType() == SpotType.RESERVED) {
-            reservationFine = 50.0; 
+        if (realTicketId == null) {
+            throw new IllegalStateException("No active ticket found in database for plate: " + plate);
         }
+
+        LocalDateTime entry = tempTicket.getEntryTime();
+        Duration duration = Duration.between(entry, LocalDateTime.now());
         
-        // 4. Check for previous unpaid fines
-        double previousFines = outstandingFinesDB.getOrDefault(ticket.getLicensePlate(), 0.0);
+        long hours = (long) Math.ceil(duration.toMinutes() / 60.0);
+        if (hours <= 0) hours = 1; 
+
+        double rate = tempTicket.getHourlyRate();
+        double parkingFee = hours * rate;
+
+        // Calculate Fine based on the Admin's selection
+        double overstayFine = 0.0;
         
-        return new Bill(ticket.getLicensePlate(), hours, parkingFee, currentFine, previousFines);
-    }
-    
-  
-    public void processPayment(String licensePlate, double amountPaid, double totalDue) {
-        this.totalRevenue += amountPaid;
-        
-        if (amountPaid < totalDue) {
-            double remainingFine = totalDue - amountPaid;
-            outstandingFinesDB.put(licensePlate, remainingFine);
-        } else {
-            outstandingFinesDB.remove(licensePlate);
+        if (hours > OVERSTAY_LIMIT_HOURS) {
+            switch (currentFineScheme) {
+                case FIXED_PENALTY -> overstayFine = FIXED_FINE_AMOUNT;
+                case OVERSTAY_HOURLY -> overstayFine = (hours - OVERSTAY_LIMIT_HOURS) * 5.0; // Example: RM 5 per extra hour
+                default -> overstayFine = 0.0;
+            }
         }
-    }
-    
-    //routing hours
-    private long calculateHours(LocalDateTime start, LocalDateTime end) {
-        Duration duration = Duration.between(start, end);
-        long minutes = duration.toMinutes();
-        if (minutes <= 0) return 0;
-        
-        // Ceiling division: (minutes + 59) / 60
-        return (minutes + 59) / 60;
+
+        double previousFines = DatabaseHandler.getPreviousUnpaidFines(plate);
+        double total = parkingFee + overstayFine + previousFines;
+
+        return new Bill(
+            realTicketId, 
+            plate,
+            tempTicket.getSpotId(),
+            duration,
+            rate,
+            parkingFee,
+            overstayFine,
+            previousFines,
+            total
+        );
     }
 
-    
-    private double calculateOverstayFine(long hours) {
-        if (hours <= 24) return 0.0; // No fine if within 24 hours
-        
-        long overstayHours = hours - 24;
-        
-        switch (currentFineScheme) {
-            case FIXED:
-                return 50.0;
-                
-            case HOURLY:
-                return overstayHours * 20.0;
-                
-            case PROGRESSIVE:
-                double fine = 50.0; // Base fine for breaking 24h limit
-                
-                if (hours > 48) {
-                    fine += 100.0; // Add RM 100
-                }
-                if (hours > 72) {
-                    fine += 150.0; // Add RM 150
-                }
-                if (hours > 92) {
-                    fine += 200.0; // Add RM 150
-                }
-                return fine;
-                
-            default:
-                return 0.0;
-        }
-    }
-
-    /**
-     * Inner class to hold the Billing Result
-     */
-    public static class Bill {
-        public final String plate;
-        public final long hours;
-        public final double parkingFee;
-        public final double currentFine;
-        public final double previousFines;
-        public final double totalAmount;
-        public double amountPaid; 
-        public String method;     
-
-        public Bill(String plate, long hours, double parkingFee, double currentFine, double previousFines) {
-            this.plate = plate;
-            this.hours = hours;
-            this.parkingFee = parkingFee;
-            this.currentFine = currentFine;
-            this.previousFines = previousFines;
-            this.totalAmount = parkingFee + currentFine + previousFines;
-            this.amountPaid = 0.0;
-            this.method = "N/A";
-        }
+    public void processPayment(Bill bill, ParkingLot lot) {
+        DatabaseHandler.processExit(bill.ticketId(), bill.spotId(), bill.parkingFee(), bill.previousFines());
+        lot.releaseSpotByPlate(bill.plateNumber());
     }
 }

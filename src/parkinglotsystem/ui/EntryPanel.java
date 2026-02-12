@@ -1,13 +1,9 @@
 package parkinglotsystem.ui;
 
 import java.awt.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import javax.swing.*;
-import parkinglotsystem.DatabaseHandler;
 import parkinglotsystem.core.*;
 
 public class EntryPanel extends JPanel {
@@ -96,7 +92,6 @@ public class EntryPanel extends JPanel {
                 default -> throw new IllegalStateException("Unknown type");
             }
 
-            // Get suitable spots from service [cite: 71]
             List<ParkingSpot> spots = entryService.findAvailableSpotsFor(tempVehicle);
             
             spotCombo.removeAllItems();
@@ -105,17 +100,14 @@ public class EntryPanel extends JPanel {
 
             for (ParkingSpot s : spots) {
                 String typeLabel = " [" + s.getSpotType().toString() + "]";
-
                 String displayText = s.getSpotId() + typeLabel;
                 
                 if (isReservedSelected) {
-                    // Filter: Only show Reserved spots
                     if (s.getSpotType() == SpotType.RESERVED) {
                         spotCombo.addItem(displayText);
                         displayedCount++;
                     }
                 } else {
-                    // Filter: Show everything EXCEPT Reserved spots
                     if (s.getSpotType() != SpotType.RESERVED) {
                         spotCombo.addItem(displayText);
                         displayedCount++;
@@ -166,67 +158,44 @@ public class EntryPanel extends JPanel {
                 return; 
             }
 
-            Ticket ticket = entryService.parkVehicle(spotId, vehicle);
+            // ATTEMPT TO PARK with specific error handling
+            try {
+                // This call now handles both the internal logic and Database saving
+                Ticket ticket = entryService.parkVehicle(spotId, vehicle);
 
-            DateTimeFormatter entryTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            String formattedTime = ticket.getEntryTime().format(entryTimeFormat);
+                // If successful, display the Ticket details
+                DateTimeFormatter entryTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                String formattedTime = ticket.getEntryTime().format(entryTimeFormat);
 
-            // Display Ticket output [cite: 75, 76]
-            ticketArea.setText("********************************\n");
-            ticketArea.append("       PARKING TICKET       \n");
-            ticketArea.append("********************************\n");
-            ticketArea.append("Ticket ID : " + ticket.getTicketId() + "\n");
-            ticketArea.append("Plate No  : " + ticket.getLicensePlate() + "\n");
-            ticketArea.append("Vehicle   : " + vehicle.getVehicleType() + "\n");
-            ticketArea.append("Spot ID   : " + ticket.getSpotId() + "\n");
-            ticketArea.append("Entry Time: " + formattedTime + "\n");
-            ticketArea.append("********************************\n");
-            ticketArea.append("  PLEASE KEEP TICKET SAFE  \n");
+                ticketArea.setText("********************************\n");
+                ticketArea.append("       PARKING TICKET       \n");
+                ticketArea.append("********************************\n");
+                ticketArea.append("Ticket ID : " + ticket.getTicketId() + "\n");
+                ticketArea.append("Plate No  : " + ticket.getLicensePlate() + "\n");
+                ticketArea.append("Vehicle   : " + vehicle.getVehicleType() + "\n");
+                ticketArea.append("Spot ID   : " + ticket.getSpotId() + "\n");
+                ticketArea.append("Entry Time: " + formattedTime + "\n");
+                ticketArea.append("********************************\n");
+                ticketArea.append("  PLEASE KEEP TICKET SAFE  \n");
 
-            // Reset UI for next entry
-            plateField.setText("");
-            spotCombo.removeAllItems();
-            parkButton.setEnabled(false);
+                JOptionPane.showMessageDialog(this, "Vehicle successfully parked in spot: " + spotId);
 
-            syncToDatabase(ticket, vehicle, spotId);
+                // Reset UI for next entry
+                plateField.setText("");
+                spotCombo.removeAllItems();
+                parkButton.setEnabled(false);
+
+            } catch (IllegalArgumentException ex) {
+                // Catches "Vehicle already parked!" or spot mismatch errors
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Entry Error", JOptionPane.ERROR_MESSAGE);
+            } catch (Exception ex) {
+                // Catch any other unexpected system errors
+                JOptionPane.showMessageDialog(this, "System Error: " + ex.getMessage(), "System Error", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Parking Failed: " + ex.getMessage());
-            ex.printStackTrace();
-        }
-    }
-
-    private void syncToDatabase(Ticket ticket, Vehicle vehicle, String spotId) {
-        try (Connection conn = DatabaseHandler.connect()) {
-            if (conn == null) return;
-            
-            // Start Transaction
-            conn.setAutoCommit(false);
-
-            try {
-                // Update Spot Status
-                String updateSpot = "UPDATE parking_spots SET status = 'Occupied' WHERE spot_id = ?";
-                try (PreparedStatement ps1 = conn.prepareStatement(updateSpot)) {
-                    ps1.setString(1, spotId);
-                    ps1.executeUpdate();
-                }
-
-                // Insert Ticket Record
-                String insertTicket = "INSERT INTO parking_tickets (ticket_id, plate_number, spot_id, status) VALUES (?, ?, ?, 'Active')";
-                try (PreparedStatement ps2 = conn.prepareStatement(insertTicket)) {
-                    ps2.setString(1, ticket.getTicketId());
-                    ps2.setString(2, vehicle.getLicensePlate());
-                    ps2.setString(3, spotId);
-                    ps2.executeUpdate();
-                }
-
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            }
-        } catch (SQLException e) {
-            System.err.println("Database Sync Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Application Error: " + ex.getMessage());
         }
     }
 }

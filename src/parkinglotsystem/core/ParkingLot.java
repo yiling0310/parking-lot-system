@@ -79,6 +79,13 @@ public class ParkingLot {
         return Collections.unmodifiableList(floors);
     }
 
+    public Floor getFloor(int floorNumber) {
+        for (Floor f : floors) {
+            if (f.getFloorNumber() == floorNumber) return f;
+        }
+        return null;
+    }
+
     public int getTotalSpots() {
         int total = 0;
         for (Floor f : floors) {
@@ -125,6 +132,11 @@ public class ParkingLot {
         spot.occupy(vehicle);
         plateToSpot.put(plate, spot);
     }
+    public void forceRestoreVehicle(Vehicle vehicle, ParkingSpot spot) {
+    if (vehicle != null && spot != null) {
+        plateToSpot.put(vehicle.getLicensePlate(), spot);
+    }
+}
 
     public void releaseSpotByPlate(String licensePlate) {
         ParkingSpot spot = plateToSpot.remove(licensePlate);

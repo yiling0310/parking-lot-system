@@ -28,30 +28,34 @@ public class MainFrame extends JFrame {
         setContentPane(tabs);
     }
 
-    public static void main(String[] args) {
+  public static void main(String[] args) {
         DatabaseHandler.createNewTable();
-        // --- 1. INITIALIZE DATA CORRECTLY ---
-        // Define the parking spot pattern
+
+        // 1. Initialize Lot & Pattern
         SpotType[] pattern = new SpotType[]{
             SpotType.REGULAR, SpotType.REGULAR, SpotType.REGULAR,
             SpotType.COMPACT,
             SpotType.HANDICAPPED,
             SpotType.RESERVED
         };
-
-        // Use the Initializer to create the Lot AND fill it with spots
-        // (This automatically sets the Singleton instance)
         ParkingLot lot = ParkingLotInitializer.createDefaultLot(
             "University Parking", 5, 3, 10, pattern
         );
 
-        DatabaseHandler.initializeSpots(lot);
-        // --- 2. Create Services ---
+        // 2. Load Data from Database (ORDER MATTERS!)
+        DatabaseHandler.initializeSpots(lot);     // A. Create/Save default spots to DB
+        DatabaseHandler.loadSpotsFromDB(lot);     // B. Load any custom spots from DB
+        
+        // --- ADD THIS LINE ---
+        DatabaseHandler.loadActiveTickets(lot);   // C. Put the cars back in the spots!
+        // ---------------------
+
+        // 3. Create Services
         PaymentService payment = new PaymentService(); 
         EntryExitService entry = new EntryExitService(lot);
         AdminService admin = new AdminService(lot, payment);
 
-        // --- 3. Launch GUI ---
+        // 4. Launch GUI
         SwingUtilities.invokeLater(() ->
             new MainFrame(lot, admin, entry, payment).setVisible(true)
         );
