@@ -15,7 +15,6 @@ public class PaymentService {
     private static final double OVERSTAY_HOURLY_RATE = 20.0;
 
     public PaymentService() {
-        // 从数据库读取，如果没读到，默认给 FIXED_PENALTY
         String savedScheme = DatabaseHandler.getSystemSetting("fine_scheme", "FIXED_PENALTY");
         try {
             this.currentFineScheme = FineType.valueOf(savedScheme);
@@ -82,11 +81,6 @@ public class PaymentService {
 
         double parkingFee = hours * rate;
 
-
-        // 1. Calculate Standard Parking Fee
-        // double rate = tempTicket.getSpot().getSpotType().hourlyRateFor(tempTicket.getVehicle());
-        // double parkingFee = hours * rate;
-
         // 2. Calculate Overstay Fine
         FineType appliedFineScheme = DatabaseHandler.getFineSchemeByTicketId(realTicketId);
 
@@ -96,12 +90,10 @@ public class PaymentService {
                 case FIXED_PENALTY -> overstayFine = FIXED_FINE_AMOUNT;
                 case PROGRESSIVE -> {
                     // Cumulative progressive tiers as specified in assignment Option B.
-                    if (hours > 24) overstayFine += 50.0;
+                   if (hours > 24) overstayFine += 50.0;
                     if (hours > 48) overstayFine += 100.0;
-                    if (hours > 72) {
-                        overstayFine += 150.0;
-                        overstayFine += 200.0;
-                    }
+                    if (hours > 48) overstayFine += 150.0;
+                    if (hours > 72) overstayFine += 200.0; 
                 }
                 case OVERSTAY_HOURLY -> overstayFine = (hours - OVERSTAY_LIMIT_HOURS) * OVERSTAY_HOURLY_RATE;
                 default -> overstayFine = 0.0;

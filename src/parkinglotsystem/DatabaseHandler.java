@@ -96,14 +96,19 @@ public class DatabaseHandler {
         }
     }
 
-    public static void saveSystemSetting(String key, String value) {
-        String sql = "INSERT OR REPLACE INTO system_settings(key, value) VALUES(?, ?)";
-        try (Connection conn = connect(); 
+    public static void updateSetting(String key, String value) {
+        String sql = "INSERT INTO system_settings (key, value) VALUES (?, ?) " +
+                    "ON CONFLICT(key) DO UPDATE SET value = excluded.value";
+        
+        try (Connection conn = connect();
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, key);
             pstmt.setString(2, value);
             pstmt.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+            System.out.println("Setting saved to database: " + key + " = " + value);
+        } catch (SQLException e) {
+            System.err.println("Error updating setting: " + e.getMessage());
+        }
     }
 
     public static void initializeSpots(ParkingLot lot) {
@@ -429,8 +434,8 @@ public class DatabaseHandler {
 
     // 4. ADMIN: Get Total Revenue from Paid Tickets + Paid Fines
     public static double getTotalRevenue() {
-        String sqlTickets = "SELECT SUM(parking_fee) FROM parking_tickets WHERE status = 'Paid'";
-        String sqlFines = "SELECT SUM(amount) FROM parking_fines WHERE status = 'Paid'";
+        String sqlTickets = "SELECT parking_fee FROM parking_tickets WHERE status = 'Paid'";
+        String sqlFines = "SELECT amount FROM parking_fines WHERE status = 'Paid'";
         
         double total = 0.0;
         
@@ -511,21 +516,6 @@ public class DatabaseHandler {
             System.out.println("Error applying fine payment: " + e.getMessage());
         }
         return applied;
-    }
-
-    public static void updateSetting(String key, String value) {
-        String sql = "INSERT INTO system_settings (key, value) VALUES (?, ?) " +
-                    "ON CONFLICT(key) DO UPDATE SET value = excluded.value";
-        
-        try (Connection conn = connect();
-            PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, key);
-            pstmt.setString(2, value);
-            pstmt.executeUpdate();
-            System.out.println("Setting saved to database: " + key + " = " + value);
-        } catch (SQLException e) {
-            System.err.println("Error updating setting: " + e.getMessage());
-        }
     }
 
     public static String getSystemSetting(String key, String defaultValue) {
