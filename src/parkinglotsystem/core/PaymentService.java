@@ -8,16 +8,27 @@ import parkinglotsystem.DatabaseHandler;
 public class PaymentService {
 
     // Default to FIXED_PENALTY as per Feature 3 requirements
-    private FineType currentFineScheme = FineType.FIXED_PENALTY;
+    private FineType currentFineScheme;
     private static final double FIXED_FINE_AMOUNT = 50.0;
     private static final double MISUSE_FINE_AMOUNT = 100.0; // Fine for reserved-spot misuse
     private static final long OVERSTAY_LIMIT_HOURS = 24;
     private static final double OVERSTAY_HOURLY_RATE = 20.0;
 
+    public PaymentService() {
+        // 从数据库读取，如果没读到，默认给 FIXED_PENALTY
+        String savedScheme = DatabaseHandler.getSystemSetting("fine_scheme", "FIXED_PENALTY");
+        try {
+            this.currentFineScheme = FineType.valueOf(savedScheme);
+        } catch (Exception e) {
+            this.currentFineScheme = FineType.FIXED_PENALTY;
+        }
+    }
+
     // --- METHODS FOR ADMIN PANEL UI ---
     public void setFineScheme(FineType type) {
         this.currentFineScheme = type;
         System.out.println("Fine Scheme updated to: " + type);
+        DatabaseHandler.updateSetting("fine_scheme", type.name());
     }
 
     public FineType getCurrentFineScheme() {

@@ -61,12 +61,18 @@ public class DatabaseHandler {
                 + " FOREIGN KEY (plate_number) REFERENCES vehicles(plate_number)\n"
                 + ");";
 
+        String sqlSettings = "CREATE TABLE IF NOT EXISTS system_settings ("
+                + " key text PRIMARY KEY,"
+                + " value text NOT NULL"
+                + ");";
+
         try (Connection conn = connect();
              Statement stmt = conn.createStatement()) {
             stmt.execute(sqlVehicles);
             stmt.execute(sqlSpots);
             stmt.execute(sqlTickets);
             stmt.execute(sqlFines); 
+            stmt.execute(sqlSettings);
             ensureSchemaEvolution(conn);
         } catch (SQLException e) {
             System.out.println("Table Creation Error: " + e.getMessage());
@@ -88,6 +94,16 @@ public class DatabaseHandler {
         } catch (SQLException ignored) {
             // Column already exists for existing databases.
         }
+    }
+
+    public static void saveSystemSetting(String key, String value) {
+        String sql = "INSERT OR REPLACE INTO system_settings(key, value) VALUES(?, ?)";
+        try (Connection conn = connect(); 
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            pstmt.setString(2, value);
+            pstmt.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
     }
 
     public static void initializeSpots(ParkingLot lot) {
@@ -495,5 +511,35 @@ public class DatabaseHandler {
             System.out.println("Error applying fine payment: " + e.getMessage());
         }
         return applied;
+    }
+
+    public static void updateSetting(String key, String value) {
+        String sql = "INSERT INTO system_settings (key, value) VALUES (?, ?) " +
+                    "ON CONFLICT(key) DO UPDATE SET value = excluded.value";
+        
+        try (Connection conn = connect();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            pstmt.setString(2, value);
+            pstmt.executeUpdate();
+            System.out.println("Setting saved to database: " + key + " = " + value);
+        } catch (SQLException e) {
+            System.err.println("Error updating setting: " + e.getMessage());
+        }
+    }
+
+    public static String getSystemSetting(String key, String defaultValue) {
+        String sql = "SELECT value FROM system_settings WHERE key = ?";
+        try (Connection conn = connect();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getString("value");
+            }
+        } catch (SQLException e) {
+            System.out.println("Error reading setting: " + e.getMessage());
+        }
+        return defaultValue;
     }
 }

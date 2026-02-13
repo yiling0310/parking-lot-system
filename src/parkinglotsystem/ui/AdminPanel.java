@@ -4,6 +4,7 @@ import java.awt.*;
 import java.util.List; 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import parkinglotsystem.DatabaseHandler;
 import parkinglotsystem.admin.AdminService;
 import parkinglotsystem.core.FineType;
 import parkinglotsystem.core.SpotType;
@@ -42,6 +43,7 @@ public class AdminPanel extends JPanel {
             FineType selected = (FineType) fineSchemeCombo.getSelectedItem();
             adminService.setFineScheme(selected);
             JOptionPane.showMessageDialog(this, "Fine Scheme updated to: " + selected + "\n(Will apply to future entries only)");
+            DatabaseHandler.saveSystemSetting("fine_scheme", selected.name());
         });
 
         add(buildTop(), BorderLayout.NORTH);
@@ -85,6 +87,7 @@ public class AdminPanel extends JPanel {
         
         JButton refreshBtn = new JButton("Refresh Data");
         refreshBtn.addActionListener(e -> refresh());
+
         JButton parkedBtn = new JButton("View Parked Vehicles");
         parkedBtn.addActionListener(e -> showParkedVehiclesDialog());
         JButton unpaidBtn = new JButton("View Unpaid Fines");
