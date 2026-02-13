@@ -9,7 +9,7 @@ public class PaymentService {
     // Default to FIXED_PENALTY as per Feature 3 requirements
     private FineType currentFineScheme = FineType.FIXED_PENALTY;
     private static final double FIXED_FINE_AMOUNT = 50.0;
-    private static final double MISUSE_FINE_AMOUNT = 100.0; // New: Fine for parking in wrong spot
+    private static final double MISUSE_FINE_AMOUNT = 100.0; // Fine for reserved-spot misuse
     private static final long OVERSTAY_LIMIT_HOURS = 24;
 
     // --- METHODS FOR ADMIN PANEL UI ---
@@ -71,12 +71,7 @@ public class PaymentService {
         double previousFines = DatabaseHandler.getPreviousUnpaidFines(plate);
         
         // 5. Total Amount
-        // Note: misuseFine is added to the total (you might want to create a field for it in Bill record if you want to display it separately, 
-        // otherwise lump it with overstay or parking fee for display).
-        // For this fix, I will add it to 'overstayFine' so it shows up in the 'Fines' section of your Bill record.
-        double totalFines = overstayFine + misuseFine;
-        
-        double total = parkingFee + totalFines + previousFines;
+        double total = parkingFee + overstayFine + misuseFine + previousFines;
 
         return new Bill(
             realTicketId, 
@@ -85,21 +80,23 @@ public class PaymentService {
             duration,
             rate,
             parkingFee,
-            totalFines, // Passing combined fines here so UI shows it
+            overstayFine,
+            misuseFine,
             previousFines,
             total
         );
     }
 
     public void processPayment(Bill bill, ParkingLot lot) {
-        // BUG FIX: You must add the Overstay/Misuse fines to the Parking Fee 
-        // when saving to the DB, otherwise that revenue is lost in the report.
-        double totalCollectedForTicket = bill.parkingFee() + bill.overstayFine(); // includes misuse if lumped
-
+        // Ticket stores parking fee only. Fines are stored in parking_fines for clean reporting.
+        double totalNewFines = bill.overstayFine() + bill.misuseFine();
+        if (totalNewFines > 0) {
+            DatabaseHandler.addFineRecord(bill.plateNumber(), totalNewFines, "Paid");
+        }
         DatabaseHandler.processExit(
             bill.ticketId(), 
             bill.spotId(), 
-            totalCollectedForTicket, // <--- CHANGED THIS
+            bill.parkingFee(),
             bill.previousFines()
         );
         

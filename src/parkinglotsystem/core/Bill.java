@@ -10,6 +10,7 @@ public record Bill(
     double hourlyRate,
     double parkingFee,
     double overstayFine,
+    double misuseFine,
     double previousFines,
     double totalAmount
 ) {}

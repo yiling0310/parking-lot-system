@@ -30,6 +30,15 @@ public class Floor {
         rows.add(row);
     }
 
+    public Row getRow(int rowNumber) {
+        for (Row row : rows) {
+            if (row.getRowNumber() == rowNumber) {
+                return row;
+            }
+        }
+        return null;
+    }
+
     public List<Row> getRows() {
         return Collections.unmodifiableList(rows);
     }

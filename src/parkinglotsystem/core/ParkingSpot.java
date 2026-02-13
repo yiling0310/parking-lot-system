@@ -45,6 +45,10 @@ public class ParkingSpot {
         return currentVehicle == null;
     }
 
+    public SpotStatus getStatus() {
+        return isAvailable() ? SpotStatus.AVAILABLE : SpotStatus.OCCUPIED;
+    }
+
     public void occupy(Vehicle vehicle) {
         if (vehicle == null) throw new IllegalArgumentException("Vehicle cannot be null");
         this.currentVehicle = vehicle;

@@ -45,13 +45,10 @@ public class EntryExitService {
         }
 
         // Rule 2: Reserved spots validation
-        // FIX: Removed the logic that returned 'true' for everyone.
-        // Now, if a spot is RESERVED, standard vehicles will fall through to the switch 
-        // and return 'false' because RESERVED is not in their allowed list.
+        // Reserved spots are selectable for non-handicapped vehicle types.
+        // Misuse fines, if applicable, are handled during billing.
         if (sType == SpotType.RESERVED) {
-            // Logic can be expanded here if you add a 'RESERVED' VehicleType later.
-            // For now, we block standard traffic.
-            return false; 
+            return vType != VehicleType.HANDICAPPED;
         }
 
         // Rule 3: Standard Vehicles (Car, Moto, SUV)

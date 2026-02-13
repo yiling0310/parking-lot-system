@@ -141,7 +141,7 @@ public class AdminService {
                         floor.getFloorNumber(),
                         spot.getSpotId(),
                         spot.getSpotType().name(),
-                        spot.isAvailable() ? "Available" : "Occupied",
+                        spot.getStatus().name(),
                         plate,
                         spot.getHourlyRate()
                 ));
@@ -151,19 +151,51 @@ public class AdminService {
     }
 
     public void createNewFloor(int floorNumber) {
+        if (floorNumber <= 0) {
+            throw new IllegalArgumentException("Floor number must be >= 1");
+        }
         if (parkingLot.getFloor(floorNumber) != null) {
             throw new IllegalArgumentException("Floor " + floorNumber + " already exists!");
         }
         parkingLot.addFloor(new Floor(floorNumber));
     }
 
-    public void createNewSpot(int floorNum, String spotId, SpotType type, double rate) {
+    public void createNewRow(int floorNum, int rowNum) {
+        if (rowNum <= 0) {
+            throw new IllegalArgumentException("Row number must be >= 1");
+        }
         Floor floor = parkingLot.getFloor(floorNum);
         if (floor == null) {
             throw new IllegalArgumentException("Floor " + floorNum + " does not exist!");
         }
-        ParkingSpot newSpot = new ParkingSpot(spotId, floorNum, 1, type);
-        floor.addSpot(newSpot);
+        if (floor.getRow(rowNum) != null) {
+            throw new IllegalArgumentException("Row " + rowNum + " already exists on floor " + floorNum + "!");
+        }
+        floor.addRow(new Row(rowNum));
+    }
+
+    public void createNewSpot(int floorNum, int rowNum, String spotId, SpotType type, double rate) {
+        if (rowNum <= 0) {
+            throw new IllegalArgumentException("Row number must be >= 1");
+        }
+        if (spotId == null || spotId.isBlank()) {
+            throw new IllegalArgumentException("Spot ID cannot be empty");
+        }
+        Floor floor = parkingLot.getFloor(floorNum);
+        if (floor == null) {
+            throw new IllegalArgumentException("Floor " + floorNum + " does not exist!");
+        }
+        for (ParkingSpot spot : floor.getSpots()) {
+            if (spot.getSpotId().equalsIgnoreCase(spotId.trim())) {
+                throw new IllegalArgumentException("Spot ID already exists: " + spotId);
+            }
+        }
+        Row row = floor.getRow(rowNum);
+        if (row == null) {
+            throw new IllegalArgumentException("Row " + rowNum + " does not exist on floor " + floorNum + "!");
+        }
+        ParkingSpot newSpot = new ParkingSpot(spotId.trim(), floorNum, rowNum, type);
+        row.addSpot(newSpot);
         DatabaseHandler.saveSpot(newSpot);
     }
 }

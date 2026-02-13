@@ -108,6 +108,9 @@ public class ExitPanel extends JPanel {
         if (bill.overstayFine() > 0) {
             sb.append("Overstay Fine : RM ").append(String.format("%.2f", bill.overstayFine())).append(" (>24h)\n");
         }
+        if (bill.misuseFine() > 0) {
+            sb.append("Misuse Fine   : RM ").append(String.format("%.2f", bill.misuseFine())).append(" (Reserved Spot)\n");
+        }
         if (bill.previousFines() > 0) {
             sb.append("Unpaid Fines  : RM ").append(String.format("%.2f", bill.previousFines())).append(" (Prev)\n");
         }

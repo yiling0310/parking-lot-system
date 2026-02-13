@@ -52,7 +52,7 @@ public class DatabaseHandler {
                 + " plate_number text NOT NULL,\n"
                 + " amount real NOT NULL,\n"
                 + " issued_date datetime DEFAULT CURRENT_TIMESTAMP,\n"
-                + " status text CHECK(status IN ('Unpaid', 'Paid')),\n"
+                + " status text DEFAULT 'Unpaid' CHECK(status IN ('Unpaid', 'Paid')),\n"
                 + " FOREIGN KEY (plate_number) REFERENCES vehicles(plate_number)\n"
                 + ");";
 
@@ -146,8 +146,14 @@ public class DatabaseHandler {
                 
                 if (!exists) {
                     SpotType type = SpotType.valueOf(typeStr);
-                    ParkingSpot s = new ParkingSpot(id, floorNum, 1, type);
-                    floor.addSpot(s);
+                    int rowNum = rs.getInt("row");
+                    ParkingSpot s = new ParkingSpot(id, floorNum, rowNum, type);
+                    Row row = floor.getRow(rowNum);
+                    if (row == null) {
+                        row = new Row(rowNum);
+                        floor.addRow(row);
+                    }
+                    row.addSpot(s);
                 }
             }
             System.out.println("Database spots loaded into RAM.");
@@ -180,11 +186,12 @@ public class DatabaseHandler {
     }
 
     private static void saveVehicle(Vehicle v) {
-        String sql = "INSERT OR IGNORE INTO vehicles (plate_number, vehicle_type) VALUES (?, ?)";
+        String sql = "INSERT OR IGNORE INTO vehicles (plate_number, vehicle_type, has_handicapped_card) VALUES (?, ?, ?)";
         try (Connection conn = connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, v.getLicensePlate());
             pstmt.setString(2, v.getVehicleType().name()); 
+            pstmt.setInt(3, v.isHandicappedCardHolder() ? 1 : 0);
             pstmt.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Error saving vehicle: " + e.getMessage());
@@ -359,5 +366,22 @@ public class DatabaseHandler {
             System.out.println("Error calculating revenue: " + e.getMessage());
         }
         return total;
+    }
+
+    public static void addFineRecord(String plateNumber, double amount, String status) {
+        if (plateNumber == null || plateNumber.isBlank() || amount <= 0) {
+            return;
+        }
+        String normalizedStatus = "Paid".equalsIgnoreCase(status) ? "Paid" : "Unpaid";
+        String sql = "INSERT INTO parking_fines (plate_number, amount, status) VALUES (?, ?, ?)";
+        try (Connection conn = connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, plateNumber);
+            pstmt.setDouble(2, amount);
+            pstmt.setString(3, normalizedStatus);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("Error saving fine: " + e.getMessage());
+        }
     }
 }

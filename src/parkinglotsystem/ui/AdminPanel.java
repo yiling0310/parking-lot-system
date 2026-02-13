@@ -154,7 +154,7 @@ public class AdminPanel extends JPanel {
     }
 
     private void showManagementDialog() {
-        String[] options = {"Add Floor", "Add Spot"};
+        String[] options = {"Add Floor", "Add Row", "Add Spot"};
         int choice = JOptionPane.showOptionDialog(this, "What would you like to add?", 
                 "Manage Structure", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, 
                 null, options, options[0]);
@@ -167,17 +167,26 @@ public class AdminPanel extends JPanel {
                     refresh();
                     JOptionPane.showMessageDialog(this, "Floor added successfully!");
                 }
-            } else if (choice == 1) { // Add Spot
+            } else if (choice == 1) { // Add Row
                 String floorStr = JOptionPane.showInputDialog("Enter Floor Number:");
+                String rowStr = JOptionPane.showInputDialog("Enter New Row Number:");
+                if (floorStr != null && rowStr != null) {
+                    adminService.createNewRow(Integer.parseInt(floorStr), Integer.parseInt(rowStr));
+                    refresh();
+                    JOptionPane.showMessageDialog(this, "Row added successfully!");
+                }
+            } else if (choice == 2) { // Add Spot
+                String floorStr = JOptionPane.showInputDialog("Enter Floor Number:");
+                String rowStr = JOptionPane.showInputDialog("Enter Row Number:");
                 String spotId = JOptionPane.showInputDialog("Enter Spot ID (e.g., 1-A):");
                 
                 // Dropdown for Spot Type
                 SpotType type = (SpotType) JOptionPane.showInputDialog(this, "Select Type", "Type", 
                         JOptionPane.QUESTION_MESSAGE, null, SpotType.values(), SpotType.REGULAR);
                 
-                if (floorStr != null && spotId != null && type != null) {
+                if (floorStr != null && rowStr != null && spotId != null && type != null) {
                      // Default rate 5.0
-                     adminService.createNewSpot(Integer.parseInt(floorStr), spotId, type, 5.0); 
+                     adminService.createNewSpot(Integer.parseInt(floorStr), Integer.parseInt(rowStr), spotId, type, 5.0); 
                      refresh();
                      JOptionPane.showMessageDialog(this, "Spot added successfully!");
                 }
