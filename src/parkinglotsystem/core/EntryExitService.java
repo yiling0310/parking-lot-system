@@ -39,16 +39,22 @@ public class EntryExitService {
         // User Request: They can ONLY park in Handicapped spots.
         // Reason: This ensures they always get the 0.00 rate (Free).
         if (vType == VehicleType.HANDICAPPED) {
-            return true;
+            // FIX: Strictly return true ONLY if the spot is HANDICAPPED.
+            // Previous code 'return true' allowed them to park in Paid spots (Regular/Compact).
+            return sType == SpotType.HANDICAPPED;
         }
 
-        // Rule 2: Reserved spots are ONLY for Reserved vehicles (blocking others)
+        // Rule 2: Reserved spots validation
+        // FIX: Removed the logic that returned 'true' for everyone.
+        // Now, if a spot is RESERVED, standard vehicles will fall through to the switch 
+        // and return 'false' because RESERVED is not in their allowed list.
         if (sType == SpotType.RESERVED) {
-            return true; 
+            // Logic can be expanded here if you add a 'RESERVED' VehicleType later.
+            // For now, we block standard traffic.
+            return false; 
         }
 
         // Rule 3: Standard Vehicles (Car, Moto, SUV)
-        // They cannot park in Handicapped spots anymore (since checkbox is gone).
         return switch (vType) {
             case MOTORCYCLE -> sType == SpotType.COMPACT;
             case CAR -> sType == SpotType.COMPACT || sType == SpotType.REGULAR;
@@ -62,8 +68,9 @@ public class EntryExitService {
      */
     public Ticket parkVehicle(String spotId, Vehicle vehicle) {
         if (parkingLot.findSpotByPlate(vehicle.getLicensePlate()).isPresent()) {
-        throw new IllegalArgumentException("Vehicle with plate " + vehicle.getLicensePlate() + " is already parked!");
-    }
+            throw new IllegalArgumentException("Vehicle with plate " + vehicle.getLicensePlate() + " is already parked!");
+        }
+        
         // 1. Find the spot object
         ParkingSpot spot = findSpotById(spotId);
         

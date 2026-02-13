@@ -84,10 +84,11 @@ public class EntryPanel extends JPanel {
             VehicleType type = (VehicleType) typeCombo.getSelectedItem();
             Vehicle tempVehicle;
 
+            // FIX: Pass 'hasCard' to ALL constructors, not just HandicappedVehicle
             switch (type) {
-                case CAR -> tempVehicle = new Car(plate, false);
-                case MOTORCYCLE -> tempVehicle = new Motorcycle(plate, false);
-                case SUV_TRUCK -> tempVehicle = new Suv(plate, false);
+                case CAR -> tempVehicle = new Car(plate, hasCard);
+                case MOTORCYCLE -> tempVehicle = new Motorcycle(plate, hasCard);
+                case SUV_TRUCK -> tempVehicle = new Suv(plate, hasCard);
                 case HANDICAPPED -> tempVehicle = new HandicappedVehicle(plate, hasCard);                
                 default -> throw new IllegalStateException("Unknown type");
             }
@@ -141,10 +142,11 @@ public class EntryPanel extends JPanel {
             String spotId = selectedText.split(" ")[0];
 
             Vehicle vehicle;
+            // FIX: Pass 'hasCard' to ALL constructors here as well
             switch (type) {
-                case CAR -> vehicle = new Car(plate, false);
-                case MOTORCYCLE -> vehicle = new Motorcycle(plate, false);
-                case SUV_TRUCK -> vehicle = new Suv(plate, false);
+                case CAR -> vehicle = new Car(plate, hasCard);
+                case MOTORCYCLE -> vehicle = new Motorcycle(plate, hasCard);
+                case SUV_TRUCK -> vehicle = new Suv(plate, hasCard);
                 case HANDICAPPED -> vehicle = new HandicappedVehicle(plate, hasCard);
                 default -> throw new IllegalStateException("Unexpected value: " + type);
             }
