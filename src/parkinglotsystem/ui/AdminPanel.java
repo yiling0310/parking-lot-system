@@ -1,7 +1,7 @@
 package parkinglotsystem.ui;
 
 import java.awt.*;
-import java.util.List; // Import FineType
+import java.util.List; 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import parkinglotsystem.admin.AdminService;
@@ -14,9 +14,9 @@ public class AdminPanel extends JPanel {
 
     // UI Components
     private final JLabel summaryLabel = new JLabel("-");
-    private final JLabel revenueLabel = new JLabel("RM 0.00"); // NEW: Revenue Display
+    private final JLabel revenueLabel = new JLabel("RM 0.00"); 
     private final JLabel finesLabel = new JLabel("Unpaid Fines: RM 0.00");
-    private final JComboBox<FineType> fineSchemeCombo = new JComboBox<>(FineType.values()); // NEW: Fine Selector
+    private final JComboBox<FineType> fineSchemeCombo = new JComboBox<>(FineType.values()); 
     
     private final JTextArea floorArea = new JTextArea(6, 30);
 
@@ -58,25 +58,26 @@ public class AdminPanel extends JPanel {
         summaryBox.setBorder(BorderFactory.createTitledBorder("Occupancy Summary"));
         summaryBox.add(summaryLabel, BorderLayout.CENTER);
 
-        // Box 2: Financials (UPDATED)
-        JPanel financeBox = new JPanel(new GridLayout(2, 1, 5, 5)); // <--- CHANGE to GridLayout
-        financeBox.setBorder(BorderFactory.createTitledBorder("Financials")); // Rename title if you want
+        // Box 2: Financials 
+        JPanel financeBox = new JPanel(new GridLayout(2, 1, 5, 5)); 
+        financeBox.setBorder(BorderFactory.createTitledBorder("Financials")); 
         
         // Style the Revenue Label
         revenueLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
         revenueLabel.setForeground(new Color(0, 100, 0)); // Green
-        revenueLabel.setBorder(BorderFactory.createTitledBorder("Total Revenue")); // Optional: Add mini-border
+        revenueLabel.setBorder(BorderFactory.createTitledBorder("Total Revenue")); 
         
         // Style the Fines Label
         finesLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         finesLabel.setForeground(Color.RED); // Red for debt
-        finesLabel.setBorder(BorderFactory.createTitledBorder("Unpaid Fines")); // Optional: Add mini-border
+        finesLabel.setBorder(BorderFactory.createTitledBorder("Unpaid Fines")); 
 
-        financeBox.add(revenueLabel); // <--- ADD revenue
-        financeBox.add(finesLabel);   // <--- ADD fines
+        financeBox.add(revenueLabel); 
+        financeBox.add(finesLabel);   
 
         // Box 3: Settings & Actions (UPDATED)
-        JPanel settingsBox = new JPanel(new GridLayout(3, 1, 5, 5)); // <--- CHANGE rows to 3
+        // Changed rows from 3 to 4 to accommodate the new button
+        JPanel settingsBox = new JPanel(new GridLayout(4, 1, 5, 5)); 
         settingsBox.setBorder(BorderFactory.createTitledBorder("Admin Settings"));
         
         JPanel schemePanel = new JPanel(new BorderLayout());
@@ -86,12 +87,17 @@ public class AdminPanel extends JPanel {
         JButton refreshBtn = new JButton("Refresh Data");
         refreshBtn.addActionListener(e -> refresh());
 
-        // Feature 1 Fix: Add Manage Button
-        JButton manageBtn = new JButton("Manage Structure");  // <--- ADD THIS
-        manageBtn.addActionListener(e -> showManagementDialog()); // <--- ADD THIS
+        // Feature 1: Manage Button
+        JButton manageBtn = new JButton("Manage Structure");  
+        manageBtn.addActionListener(e -> showManagementDialog()); 
+
+        // Feature 4: View Reports Button (NEW)
+        JButton reportBtn = new JButton("View Reports");
+        reportBtn.addActionListener(e -> showReportDialog());
 
         settingsBox.add(schemePanel);
-        settingsBox.add(manageBtn); // <--- Add to panel
+        settingsBox.add(manageBtn); 
+        settingsBox.add(reportBtn); // <--- Added here
         settingsBox.add(refreshBtn);
 
         top.add(summaryBox);
@@ -146,6 +152,7 @@ public class AdminPanel extends JPanel {
             });
         }
     }
+
     private void showManagementDialog() {
         String[] options = {"Add Floor", "Add Spot"};
         int choice = JOptionPane.showOptionDialog(this, "What would you like to add?", 
@@ -169,7 +176,7 @@ public class AdminPanel extends JPanel {
                         JOptionPane.QUESTION_MESSAGE, null, SpotType.values(), SpotType.REGULAR);
                 
                 if (floorStr != null && spotId != null && type != null) {
-                     // Default rate 5.0, you can change this if needed
+                     // Default rate 5.0
                      adminService.createNewSpot(Integer.parseInt(floorStr), spotId, type, 5.0); 
                      refresh();
                      JOptionPane.showMessageDialog(this, "Spot added successfully!");
@@ -180,4 +187,13 @@ public class AdminPanel extends JPanel {
         }
     }
     
+    // Feature 4: Helper to open the report dialog
+    private void showReportDialog() {
+        // Find the parent frame to center the dialog
+        Window parentWindow = SwingUtilities.getWindowAncestor(this);
+        Frame parentFrame = (parentWindow instanceof Frame) ? (Frame) parentWindow : null;
+        
+        ReportDialog dialog = new ReportDialog(parentFrame, adminService);
+        dialog.setVisible(true);
+    }
 }

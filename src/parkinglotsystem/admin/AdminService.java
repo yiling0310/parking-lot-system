@@ -1,7 +1,9 @@
 package parkinglotsystem.admin;
 
 import java.util.ArrayList;
+import java.util.HashMap; // NEW
 import java.util.List;
+import java.util.Map;     // NEW
 import parkinglotsystem.DatabaseHandler;
 import parkinglotsystem.core.*;
 
@@ -24,6 +26,24 @@ public class AdminService {
             this.hourlyRate = hourlyRate;
         }
     }
+
+    // --- NEW: Data Structure for Report ---
+    public static class TypeStat {
+        public final String typeName;
+        public final int total;
+        public final int occupied;
+
+        public TypeStat(String typeName, int total, int occupied) {
+            this.typeName = typeName;
+            this.total = total;
+            this.occupied = occupied;
+        }
+
+        public double getRate() {
+            return (total == 0) ? 0.0 : (double) occupied / total;
+        }
+    }
+    // --------------------------------------
 
     private final ParkingLot parkingLot;
     private final PaymentService paymentService;
@@ -53,6 +73,43 @@ public class AdminService {
         return String.format("RM %.2f", total);
     }
     // --------------------------------------------------
+
+    // --- NEW: Logic for Reporting (Occupancy by Type) ---
+    public Map<String, TypeStat> getOccupancyBySpotType() {
+        Map<String, int[]> counts = new HashMap<>();
+
+        // 1. Initialize counters for all known types
+        for (SpotType type : SpotType.values()) {
+            counts.put(type.name(), new int[]{0, 0}); // {Total, Occupied}
+        }
+
+        // 2. Scan every spot in the lot
+        for (Floor floor : parkingLot.getFloors()) {
+            for (ParkingSpot spot : floor.getSpots()) {
+                String tName = spot.getSpotType().name();
+                
+                // Increment Total
+                counts.get(tName)[0]++;
+                
+                // Increment Occupied if not available
+                if (!spot.isAvailable()) {
+                    counts.get(tName)[1]++;
+                }
+            }
+        }
+
+        // 3. Convert to Result Map
+        Map<String, TypeStat> results = new HashMap<>();
+        for (Map.Entry<String, int[]> entry : counts.entrySet()) {
+            results.put(entry.getKey(), new TypeStat(
+                entry.getKey(), 
+                entry.getValue()[0], 
+                entry.getValue()[1]
+            ));
+        }
+        return results;
+    }
+    // ----------------------------------------------------
 
     public String getSummary() {
         return parkingLot.getStatusSummary();
