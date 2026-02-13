@@ -211,15 +211,20 @@ public class DatabaseHandler {
     }
 
     private static void saveVehicle(Vehicle v) {
-        String sql = "INSERT OR IGNORE INTO vehicles (plate_number, vehicle_type, has_handicapped_card) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO vehicles (plate_number, vehicle_type, has_handicapped_card) " +
+                 "VALUES (?, ?, ?) " +
+                 "ON CONFLICT(plate_number) DO UPDATE SET " +
+                 "vehicle_type = excluded.vehicle_type, " +
+                 "has_handicapped_card = excluded.has_handicapped_card";
+
         try (Connection conn = connect();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, v.getLicensePlate());
             pstmt.setString(2, v.getVehicleType().name()); 
             pstmt.setInt(3, v.isHandicappedCardHolder() ? 1 : 0);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            System.out.println("Error saving vehicle: " + e.getMessage());
+            System.out.println("Error saving/updating vehicle: " + e.getMessage());
         }
     }
 
@@ -262,7 +267,7 @@ public class DatabaseHandler {
                         case CAR -> vehicle = new Car(plate, isHandicapped);
                         case MOTORCYCLE -> vehicle = new Motorcycle(plate, isHandicapped);
                         case SUV_TRUCK -> vehicle = new Suv(plate, isHandicapped);
-                        case HANDICAPPED -> vehicle = new HandicappedVehicle(plate, isHandicapped);
+                        case HANDICAPPED -> vehicle = new HandicappedVehicle(plate, isHandicapped);                        
                         default -> vehicle = new Car(plate, isHandicapped);
                     }
                 } catch (Exception e) {

@@ -1,12 +1,12 @@
 package parkinglotsystem.admin;
 
-import java.util.ArrayList;
-import java.util.HashMap; // NEW
-import java.util.List;
-import java.util.Map;     // NEW
 import java.sql.Connection;
-import java.sql.PreparedStatement;
+import java.sql.PreparedStatement; // NEW
 import java.sql.ResultSet;
+import java.util.ArrayList;     // NEW
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import parkinglotsystem.DatabaseHandler;
 import parkinglotsystem.core.*;
 

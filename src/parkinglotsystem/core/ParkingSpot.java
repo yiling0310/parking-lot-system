@@ -14,22 +14,46 @@ public class ParkingSpot {
         this.rowNumber = rowNumber;
         this.spotType = spotType;
         this.currentVehicle = null;
-        
-        // Use COMPACT rate for smaller vehicles since MOTORCYCLE isn't in SpotType enum
-        this.hourlyRate = switch (spotType) {
-            case COMPACT -> 2.0;      
-            case REGULAR -> 5.0;      
-            case HANDICAPPED -> 2.0;  
-            case RESERVED -> 10.0;    
-            default -> 5.0;
-        };
     }
 
     public String getSpotId() { return spotId; }
     public int getFloorNumber() { return floorNumber; }
     public int getRowNumber() { return rowNumber; }
     public SpotType getSpotType() { return spotType; }
-    public double getHourlyRate() { return hourlyRate; }
+
+    public double getHourlyRate() {
+        if (currentVehicle == null) {
+            return switch (spotType) {
+                case COMPACT -> 2.0;
+                case REGULAR -> 5.0;
+                case HANDICAPPED -> 2.0;
+                case RESERVED -> 10.0;
+                default -> 5.0;
+            };
+        }
+
+        if (currentVehicle instanceof HandicappedVehicle) {
+            HandicappedVehicle hv = (HandicappedVehicle) currentVehicle;
+            
+            if (hv.isHandicappedCardHolder()) {
+                if (spotType == SpotType.HANDICAPPED) {
+                    return 0.0; 
+                } else {
+                    return 2.0;
+                }
+            } else {
+                return spotType.hourlyRateFor(currentVehicle); 
+            }
+        }
+
+        return switch (spotType) {
+            case COMPACT -> 2.0;
+            case REGULAR -> 5.0;
+            case HANDICAPPED -> 2.0; 
+            case RESERVED -> 10.0;
+            default -> 5.0;
+        };
+    }
 
     // This is the getter your AdminService needs!
     public Vehicle getVehicle() {

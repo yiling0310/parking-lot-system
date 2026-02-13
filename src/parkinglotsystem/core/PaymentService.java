@@ -46,13 +46,39 @@ public class PaymentService {
         long hours = (long) Math.ceil(duration.toMinutes() / 60.0);
         if (hours <= 0) hours = 1; 
 
-        FineType appliedFineScheme = DatabaseHandler.getFineSchemeByTicketId(realTicketId);
+        double rate;
+        Vehicle vehicle = tempTicket.getVehicle();
+        SpotType sType = tempTicket.getSpot().getSpotType();
 
-        // 1. Calculate Standard Parking Fee
-        double rate = tempTicket.getSpot().getSpotType().hourlyRateFor(tempTicket.getVehicle());
+        if (vehicle instanceof HandicappedVehicle) {
+            HandicappedVehicle hv = (HandicappedVehicle) vehicle;
+
+            if (hv.hasHandicappedCard()) {
+                if (sType == SpotType.HANDICAPPED) {
+                    rate = 0.0; 
+                } 
+                else {
+                    rate = 2.0; 
+                }
+            } 
+            else {
+                rate = sType.hourlyRateFor(vehicle); 
+            }
+        } 
+        else {
+            rate = sType.hourlyRateFor(vehicle);
+        }
+
         double parkingFee = hours * rate;
 
+
+        // 1. Calculate Standard Parking Fee
+        // double rate = tempTicket.getSpot().getSpotType().hourlyRateFor(tempTicket.getVehicle());
+        // double parkingFee = hours * rate;
+
         // 2. Calculate Overstay Fine
+        FineType appliedFineScheme = DatabaseHandler.getFineSchemeByTicketId(realTicketId);
+
         double overstayFine = 0.0;
         if (hours > OVERSTAY_LIMIT_HOURS) {
             switch (appliedFineScheme) {

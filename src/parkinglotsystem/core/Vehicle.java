@@ -1,6 +1,3 @@
-/*
- * File: src/parkinglotsystem/core/Vehicle.java
- */
 package parkinglotsystem.core;
 
 import java.time.LocalDateTime;
