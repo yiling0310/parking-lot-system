@@ -6,9 +6,11 @@ import java.util.List;
 public class EntryExitService {
 
     private final ParkingLot parkingLot;
+    private final PaymentService paymentService;
 
-    public EntryExitService(ParkingLot parkingLot) {
+    public EntryExitService(ParkingLot parkingLot, PaymentService paymentService) {
         this.parkingLot = parkingLot;
+        this.paymentService = paymentService;
     }
 
     /**
@@ -35,13 +37,9 @@ public class EntryExitService {
         SpotType sType = spot.getSpotType();
         VehicleType vType = vehicle.getVehicleType();
 
-        // Rule 1: HANDICAPPED Vehicles (from Dropdown)
-        // User Request: They can ONLY park in Handicapped spots.
-        // Reason: This ensures they always get the 0.00 rate (Free).
+        // Rule 1: HANDICAPPED Vehicles can park in any spot.
         if (vType == VehicleType.HANDICAPPED) {
-            // FIX: Strictly return true ONLY if the spot is HANDICAPPED.
-            // Previous code 'return true' allowed them to park in Paid spots (Regular/Compact).
-            return sType == SpotType.HANDICAPPED;
+            return true;
         }
 
         // Rule 2: Reserved spots validation
@@ -63,7 +61,7 @@ public class EntryExitService {
     /**
      * Process Entry: Validates, Parks, and Generates Ticket.
      */
-    public Ticket parkVehicle(String spotId, Vehicle vehicle) {
+    public Ticket parkVehicle(String spotId, Vehicle vehicle, boolean hasReservation) {
         if (parkingLot.findSpotByPlate(vehicle.getLicensePlate()).isPresent()) {
             throw new IllegalArgumentException("Vehicle with plate " + vehicle.getLicensePlate() + " is already parked!");
         }
@@ -85,8 +83,8 @@ public class EntryExitService {
         // 5. Generate Ticket
         Ticket ticket = new Ticket(vehicle, spot);
 
-        // --- NEW: Save Ticket to Database (Persistence for Feature 2) ---
-        parkinglotsystem.DatabaseHandler.saveTicket(ticket);
+        // Snapshot fine scheme at entry, so future scheme changes do not affect this ticket.
+        parkinglotsystem.DatabaseHandler.saveTicket(ticket, paymentService.getCurrentFineScheme(), hasReservation);
         // ----------------------------------------------------------------
 
         return ticket;

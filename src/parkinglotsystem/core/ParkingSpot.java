@@ -19,7 +19,7 @@ public class ParkingSpot {
         this.hourlyRate = switch (spotType) {
             case COMPACT -> 2.0;      
             case REGULAR -> 5.0;      
-            case HANDICAPPED -> 0.0;  
+            case HANDICAPPED -> 2.0;  
             case RESERVED -> 10.0;    
             default -> 5.0;
         };

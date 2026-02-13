@@ -1,7 +1,8 @@
 package parkinglotsystem.core;
 
 public enum FineType {
-    NONE,           // No extra fines
-    OVERSTAY_HOURLY, // Charge per hour overstayed
-    FIXED_PENALTY    // One-time RM 50 fine (This is what we use in logic)
+    NONE,            // No extra fines
+    FIXED_PENALTY,   // Option A: Flat RM 50
+    PROGRESSIVE,     // Option B: Tiered fines by overstay window
+    OVERSTAY_HOURLY  // Option C: RM 20 per overstay hour
 }

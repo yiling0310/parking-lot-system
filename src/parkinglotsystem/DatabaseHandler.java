@@ -41,7 +41,12 @@ public class DatabaseHandler {
                 + " spot_id text NOT NULL,\n"
                 + " entry_time datetime DEFAULT CURRENT_TIMESTAMP,\n"
                 + " exit_time datetime,\n"
+                + " fine_scheme text DEFAULT 'FIXED_PENALTY',\n"
+                + " has_reservation integer DEFAULT 0,\n"
                 + " parking_fee real,\n"
+                + " payment_method text,\n"
+                + " amount_paid real,\n"
+                + " remaining_balance real,\n"
                 + " status text CHECK(status IN ('Active', 'Paid')),\n"
                 + " FOREIGN KEY (plate_number) REFERENCES vehicles(plate_number),\n"
                 + " FOREIGN KEY (spot_id) REFERENCES parking_spots(spot_id)\n"
@@ -62,8 +67,26 @@ public class DatabaseHandler {
             stmt.execute(sqlSpots);
             stmt.execute(sqlTickets);
             stmt.execute(sqlFines); 
+            ensureSchemaEvolution(conn);
         } catch (SQLException e) {
             System.out.println("Table Creation Error: " + e.getMessage());
+        }
+    }
+
+    private static void ensureSchemaEvolution(Connection conn) {
+        addColumnIfMissing(conn, "parking_tickets", "fine_scheme", "text DEFAULT 'FIXED_PENALTY'");
+        addColumnIfMissing(conn, "parking_tickets", "has_reservation", "integer DEFAULT 0");
+        addColumnIfMissing(conn, "parking_tickets", "payment_method", "text");
+        addColumnIfMissing(conn, "parking_tickets", "amount_paid", "real");
+        addColumnIfMissing(conn, "parking_tickets", "remaining_balance", "real");
+    }
+
+    private static void addColumnIfMissing(Connection conn, String table, String column, String definition) {
+        String sql = "ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition;
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+        } catch (SQLException ignored) {
+            // Column already exists for existing databases.
         }
     }
 
@@ -162,8 +185,8 @@ public class DatabaseHandler {
         }
     }
 
-    public static void saveTicket(Ticket ticket) {
-        String sql = "INSERT INTO parking_tickets (ticket_id, plate_number, spot_id, entry_time, status) VALUES (?, ?, ?, ?, 'Active')";
+    public static void saveTicket(Ticket ticket, FineType fineScheme, boolean hasReservation) {
+        String sql = "INSERT INTO parking_tickets (ticket_id, plate_number, spot_id, entry_time, fine_scheme, has_reservation, status) VALUES (?, ?, ?, ?, ?, ?, 'Active')";
         
         try (Connection conn = connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -174,6 +197,8 @@ public class DatabaseHandler {
             pstmt.setString(2, ticket.getVehicle().getLicensePlate());
             pstmt.setString(3, ticket.getSpotId());
             pstmt.setTimestamp(4, Timestamp.valueOf(ticket.getEntryTime()));
+            pstmt.setString(5, fineScheme == null ? FineType.FIXED_PENALTY.name() : fineScheme.name());
+            pstmt.setInt(6, hasReservation ? 1 : 0);
             
             pstmt.executeUpdate();
             
@@ -287,6 +312,40 @@ public class DatabaseHandler {
         return null;
     }
 
+    public static FineType getFineSchemeByTicketId(String ticketId) {
+        String sql = "SELECT fine_scheme FROM parking_tickets WHERE ticket_id = ?";
+        try (Connection conn = connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, ticketId);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                String scheme = rs.getString("fine_scheme");
+                if (scheme == null || scheme.isBlank()) {
+                    return FineType.FIXED_PENALTY;
+                }
+                return FineType.valueOf(scheme);
+            }
+        } catch (SQLException | IllegalArgumentException e) {
+            System.out.println("Error fetching fine scheme: " + e.getMessage());
+        }
+        return FineType.FIXED_PENALTY;
+    }
+
+    public static boolean hasReservationByTicketId(String ticketId) {
+        String sql = "SELECT has_reservation FROM parking_tickets WHERE ticket_id = ?";
+        try (Connection conn = connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, ticketId);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("has_reservation") == 1;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error fetching reservation flag: " + e.getMessage());
+        }
+        return false;
+    }
+
     // 2. Helper: Get total unpaid fines from PREVIOUS visits
     public static double getPreviousUnpaidFines(String plateNumber) {
         String sql = "SELECT SUM(amount) FROM parking_fines WHERE plate_number = ? AND status = 'Unpaid'";
@@ -303,33 +362,36 @@ public class DatabaseHandler {
         return 0.0;
     }
 
-    // 3. Process Exit: Update Ticket, Spot, and Clear Fines if paid
-    public static void processExit(String ticketId, String spotId, double fee, double paidFines) {
-        String updateTicket = "UPDATE parking_tickets SET exit_time = CURRENT_TIMESTAMP, parking_fee = ?, status = 'Paid' WHERE ticket_id = ?";
+    // 3. Process Exit: Update ticket and spot after successful payment.
+    public static void processExit(
+            String ticketId,
+            String spotId,
+            double fee,
+            String paymentMethod,
+            double amountPaid,
+            double remainingBalance
+    ) {
+        String updateTicket = "UPDATE parking_tickets SET exit_time = CURRENT_TIMESTAMP, parking_fee = ?, "
+                + "payment_method = ?, amount_paid = ?, remaining_balance = ?, status = 'Paid' WHERE ticket_id = ?";
         String updateSpot   = "UPDATE parking_spots SET status = 'Available' WHERE spot_id = ?";
-        String clearFines   = "UPDATE parking_fines SET status = 'Paid' WHERE plate_number = (SELECT plate_number FROM parking_tickets WHERE ticket_id = ?) AND status = 'Unpaid'";
 
         try (Connection conn = connect()) {
             conn.setAutoCommit(false); // Start Transaction
 
             try (PreparedStatement psTicket = conn.prepareStatement(updateTicket);
-                 PreparedStatement psSpot   = conn.prepareStatement(updateSpot);
-                 PreparedStatement psFines  = conn.prepareStatement(clearFines)) {
+                 PreparedStatement psSpot   = conn.prepareStatement(updateSpot)) {
 
                 // A. Mark Ticket as Paid
                 psTicket.setDouble(1, fee);
-                psTicket.setString(2, ticketId);
+                psTicket.setString(2, paymentMethod);
+                psTicket.setDouble(3, amountPaid);
+                psTicket.setDouble(4, remainingBalance);
+                psTicket.setString(5, ticketId);
                 psTicket.executeUpdate();
 
                 // B. Free up the Spot
                 psSpot.setString(1, spotId);
                 psSpot.executeUpdate();
-
-                // C. Mark old fines as Paid (if any were collected)
-                if (paidFines > 0) {
-                    psFines.setString(1, ticketId); // Finds plate via subquery
-                    psFines.executeUpdate();
-                }
 
                 conn.commit(); // Commit Transaction
                 System.out.println("Exit processed successfully for Ticket: " + ticketId);
@@ -383,5 +445,50 @@ public class DatabaseHandler {
         } catch (SQLException e) {
             System.out.println("Error saving fine: " + e.getMessage());
         }
+    }
+
+    public static double applyFinePayment(String plateNumber, double amountToApply) {
+        if (amountToApply <= 0) return 0.0;
+
+        String selectSql = "SELECT fine_id, amount FROM parking_fines WHERE plate_number = ? AND status = 'Unpaid' ORDER BY issued_date, fine_id";
+        String markPaidSql = "UPDATE parking_fines SET status = 'Paid' WHERE fine_id = ?";
+        String reduceSql = "UPDATE parking_fines SET amount = ? WHERE fine_id = ?";
+        double applied = 0.0;
+
+        try (Connection conn = connect()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement selectStmt = conn.prepareStatement(selectSql);
+                 PreparedStatement markPaidStmt = conn.prepareStatement(markPaidSql);
+                 PreparedStatement reduceStmt = conn.prepareStatement(reduceSql)) {
+                selectStmt.setString(1, plateNumber);
+                ResultSet rs = selectStmt.executeQuery();
+
+                double remaining = amountToApply;
+                while (rs.next() && remaining > 0.0) {
+                    int fineId = rs.getInt("fine_id");
+                    double fineAmount = rs.getDouble("amount");
+                    if (fineAmount <= remaining) {
+                        markPaidStmt.setInt(1, fineId);
+                        markPaidStmt.executeUpdate();
+                        remaining -= fineAmount;
+                        applied += fineAmount;
+                    } else {
+                        double newAmount = fineAmount - remaining;
+                        reduceStmt.setDouble(1, newAmount);
+                        reduceStmt.setInt(2, fineId);
+                        reduceStmt.executeUpdate();
+                        applied += remaining;
+                        remaining = 0.0;
+                    }
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error applying fine payment: " + e.getMessage());
+        }
+        return applied;
     }
 }

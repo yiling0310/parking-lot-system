@@ -1,6 +1,7 @@
 package parkinglotsystem.ui;
 
 import java.awt.*;
+import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import parkinglotsystem.core.*;
 
@@ -13,8 +14,10 @@ public class ExitPanel extends JPanel {
     private final JTextField plateField = new JTextField(15);
     private final JTextArea billArea = new JTextArea(10, 30);
     private final JComboBox<String> paymentMethodCombo = new JComboBox<>(new String[]{
-        "Cash", "Credit Card", "Debit Card", "Touch 'n Go eWallet", "QR Pay"
+        "Cash", "Card"
     });
+    private final JCheckBox includePreviousFinesCheck = new JCheckBox("Pay all fines now (current + previous)", true);
+    private final JTextField amountPaidField = new JTextField("0.00", 10);
     private final JButton payButton = new JButton("Pay & Exit");
     
     private Bill currentBill = null; 
@@ -48,6 +51,9 @@ public class ExitPanel extends JPanel {
         // Add the Payment Method Label and Dropdown here
         bottomPanel.add(new JLabel("Payment Method:"));
         bottomPanel.add(paymentMethodCombo);
+        bottomPanel.add(includePreviousFinesCheck);
+        bottomPanel.add(new JLabel("Amount Paid (RM):"));
+        bottomPanel.add(amountPaidField);
         
         payButton.setEnabled(false);
         payButton.setBackground(new Color(0, 150, 0));
@@ -92,16 +98,21 @@ public class ExitPanel extends JPanel {
     }
 
     private void displayBill(Bill bill) {
-        long hours = bill.duration().toHours();
-        long minutes = bill.duration().toMinutesPart();
+        long hours = bill.billedHours();
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         StringBuilder sb = new StringBuilder();
         sb.append("============= FINAL BILL =============\n");
         sb.append("Ticket ID     : ").append(bill.ticketId()).append("\n");
         sb.append("Plate No      : ").append(bill.plateNumber()).append("\n");
         sb.append("Spot ID       : ").append(bill.spotId()).append("\n");
-        sb.append("Duration      : ").append(hours).append("h ").append(minutes).append("m\n");
+        sb.append("Entry Time    : ").append(bill.entryTime().format(dtf)).append("\n");
+        sb.append("Exit Time     : ").append(bill.exitTime().format(dtf)).append("\n");
+        sb.append("Duration      : ").append(hours).append(" hour(s)\n");
+        sb.append("Fine Scheme   : ").append(bill.fineScheme()).append("\n");
         sb.append("Hourly Rate   : RM ").append(String.format("%.2f", bill.hourlyRate())).append("\n");
+        sb.append("Fee Formula   : ").append(hours).append(" x RM ")
+          .append(String.format("%.2f", bill.hourlyRate())).append("\n");
         sb.append("--------------------------------------\n");
         sb.append("Parking Fee   : RM ").append(String.format("%.2f", bill.parkingFee())).append("\n");
         
@@ -116,28 +127,73 @@ public class ExitPanel extends JPanel {
         }
         
         sb.append("--------------------------------------\n");
+        sb.append("Mandatory Due : RM ").append(String.format("%.2f", bill.mandatoryAmount())).append("\n");
         sb.append("TOTAL DUE     : RM ").append(String.format("%.2f", bill.totalAmount())).append("\n");
         sb.append("======================================\n");
         
         billArea.setText(sb.toString());
+        amountPaidField.setText(String.format("%.2f", bill.totalAmount()));
     }
 
     private void processExit() {
         if (currentBill == null) return;
         
         String method = (String) paymentMethodCombo.getSelectedItem();
+        boolean includePreviousFines = includePreviousFinesCheck.isSelected();
+        double amountPaid;
+        try {
+            amountPaid = Double.parseDouble(amountPaidField.getText().trim());
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Invalid amount paid.");
+            return;
+        }
+        if (amountPaid < 0) {
+            JOptionPane.showMessageDialog(this, "Amount paid cannot be negative.");
+            return;
+        }
+
+        double totalFines = currentBill.overstayFine() + currentBill.misuseFine() + currentBill.previousFines();
+        double selectedDue = currentBill.mandatoryAmount() + (includePreviousFines ? totalFines : 0.0);
+        double remainingBalance = Math.max(0.0, selectedDue - amountPaid);
+        double change = Math.max(0.0, amountPaid - selectedDue);
         
         int confirm = JOptionPane.showConfirmDialog(this, 
-            "Confirm payment of RM " + String.format("%.2f", currentBill.totalAmount()) + "\nvia " + method + "?", 
+            "Confirm payment:\n"
+                + "Amount Due: RM " + String.format("%.2f", selectedDue) + "\n"
+                + "Amount Paid: RM " + String.format("%.2f", amountPaid) + "\n"
+                + "Remaining Balance: RM " + String.format("%.2f", remainingBalance) + "\n"
+                + "Change: RM " + String.format("%.2f", change) + "\n"
+                + "via " + method + "?", 
             "Payment Confirmation", JOptionPane.YES_NO_OPTION);
             
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                // We pass the method string here (even if Service doesn't store it yet, it's good for logging)
-                paymentService.processPayment(currentBill, parkingLot);
+                paymentService.processPayment(currentBill, parkingLot, method, amountPaid, includePreviousFines);
+                double allFines = currentBill.overstayFine() + currentBill.misuseFine() + currentBill.previousFines();
+                double appliedToFines = includePreviousFines
+                        ? Math.min(Math.max(0.0, amountPaid - currentBill.mandatoryAmount()), allFines)
+                        : 0.0;
+                double outstandingFines = Math.max(0.0, allFines - appliedToFines);
                 
                 JOptionPane.showMessageDialog(this, "Payment Successful via " + method + "! Gate Opening...");
-                billArea.setText("--- TRANSACTION COMPLETE ---\nPaid via: " + method);
+                StringBuilder receipt = new StringBuilder();
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                receipt.append("=========== EXIT RECEIPT ===========\n");
+                receipt.append("Ticket ID       : ").append(currentBill.ticketId()).append("\n");
+                receipt.append("Plate No        : ").append(currentBill.plateNumber()).append("\n");
+                receipt.append("Entry Time      : ").append(currentBill.entryTime().format(dtf)).append("\n");
+                receipt.append("Exit Time       : ").append(currentBill.exitTime().format(dtf)).append("\n");
+                receipt.append("Duration        : ").append(currentBill.billedHours()).append(" hour(s)\n");
+                receipt.append("Breakdown       : ").append(currentBill.billedHours())
+                        .append(" x RM ").append(String.format("%.2f", currentBill.hourlyRate())).append("\n");
+                receipt.append("Parking Fee     : RM ").append(String.format("%.2f", currentBill.parkingFee())).append("\n");
+                receipt.append("Current Fines   : RM ").append(String.format("%.2f", currentBill.overstayFine() + currentBill.misuseFine())).append("\n");
+                receipt.append("Previous Fines  : RM ").append(String.format("%.2f", currentBill.previousFines())).append("\n");
+                receipt.append("Payment Method  : ").append(method).append("\n");
+                receipt.append("Total Amount Paid: RM ").append(String.format("%.2f", amountPaid)).append("\n");
+                receipt.append("Remaining Balance: RM ").append(String.format("%.2f", outstandingFines)).append("\n");
+                receipt.append("====================================\n");
+                billArea.setText(receipt.toString());
                 plateField.setText("");
                 payButton.setEnabled(false);
                 currentBill = null;

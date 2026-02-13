@@ -6,6 +6,7 @@ import parkinglotsystem.core.*; // Import ALL core classes (needed for SpotType/
 import parkinglotsystem.ui.AdminPanel;
 import parkinglotsystem.ui.EntryPanel;
 import parkinglotsystem.ui.ExitPanel; // Make sure EntryPanel is imported!
+import parkinglotsystem.ui.ReportingPanel;
 
 public class MainFrame extends JFrame {
 
@@ -24,6 +25,7 @@ public class MainFrame extends JFrame {
         tabs.addTab("Vehicle Entry", new EntryPanel(entry));
         
         tabs.addTab("Vehicle Exit & Payment", new ExitPanel(lot, payment));
+        tabs.addTab("Reporting", new ReportingPanel(admin));
 
         setContentPane(tabs);
     }
@@ -52,7 +54,7 @@ public class MainFrame extends JFrame {
 
         // 3. Create Services
         PaymentService payment = new PaymentService(); 
-        EntryExitService entry = new EntryExitService(lot);
+        EntryExitService entry = new EntryExitService(lot, payment);
         AdminService admin = new AdminService(lot, payment);
 
         // 4. Launch GUI

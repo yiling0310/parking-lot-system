@@ -18,6 +18,7 @@ public class EntryPanel extends JPanel {
     private final JTextArea ticketArea = new JTextArea(6, 30);
     private final JButton parkButton = new JButton("Park & Generate Ticket");
     private final JCheckBox handicappedCardCheck = new JCheckBox("Has Handicapped Card");
+    private final JCheckBox vipReservationCheck = new JCheckBox("Has VIP Reservation (for Reserved spot)");
 
     public EntryPanel(EntryExitService entryService) {
         this.entryService = entryService;
@@ -26,7 +27,7 @@ public class EntryPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // 1. Top Panel: Vehicle Details
-        JPanel inputPanel = new JPanel(new GridLayout(5, 2, 5, 5));
+        JPanel inputPanel = new JPanel(new GridLayout(6, 2, 5, 5));
         inputPanel.setBorder(BorderFactory.createTitledBorder("Vehicle Entry"));
 
         inputPanel.add(new JLabel("License Plate:"));
@@ -40,6 +41,9 @@ public class EntryPanel extends JPanel {
 
         inputPanel.add(new JLabel("Handicapped Card:"));
         inputPanel.add(handicappedCardCheck);
+
+        inputPanel.add(new JLabel("VIP Reservation:"));
+        inputPanel.add(vipReservationCheck);
 
         JButton findBtn = new JButton("Find Available Spots");
         findBtn.addActionListener(e -> findSpots());
@@ -136,6 +140,7 @@ public class EntryPanel extends JPanel {
             VehicleType type = (VehicleType) typeCombo.getSelectedItem();
             String selectedText = (String) spotCombo.getSelectedItem();
             boolean hasCard = handicappedCardCheck.isSelected();
+            boolean hasReservation = vipReservationCheck.isSelected();
 
             if (selectedText == null) return;
 
@@ -151,19 +156,10 @@ public class EntryPanel extends JPanel {
                 default -> throw new IllegalStateException("Unexpected value: " + type);
             }
 
-            boolean isReservedSpot = selectedText.contains("[RESERVED]");
-            if (type == VehicleType.HANDICAPPED && isReservedSpot) {
-                JOptionPane.showMessageDialog(this, 
-                    "Error: Handicapped vehicles are NOT allowed to park in Reserved spots!", 
-                    "Access Denied", 
-                    JOptionPane.ERROR_MESSAGE);
-                return; 
-            }
-
             // ATTEMPT TO PARK with specific error handling
             try {
                 // This call now handles both the internal logic and Database saving
-                Ticket ticket = entryService.parkVehicle(spotId, vehicle);
+                Ticket ticket = entryService.parkVehicle(spotId, vehicle, hasReservation);
 
                 // If successful, display the Ticket details
                 DateTimeFormatter entryTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -184,6 +180,7 @@ public class EntryPanel extends JPanel {
 
                 // Reset UI for next entry
                 plateField.setText("");
+                vipReservationCheck.setSelected(false);
                 spotCombo.removeAllItems();
                 parkButton.setEnabled(false);
 

@@ -41,7 +41,7 @@ public class AdminPanel extends JPanel {
         fineSchemeCombo.addActionListener(e -> {
             FineType selected = (FineType) fineSchemeCombo.getSelectedItem();
             adminService.setFineScheme(selected);
-            JOptionPane.showMessageDialog(this, "Fine Scheme updated to: " + selected);
+            JOptionPane.showMessageDialog(this, "Fine Scheme updated to: " + selected + "\n(Will apply to future entries only)");
         });
 
         add(buildTop(), BorderLayout.NORTH);
@@ -75,9 +75,8 @@ public class AdminPanel extends JPanel {
         financeBox.add(revenueLabel); 
         financeBox.add(finesLabel);   
 
-        // Box 3: Settings & Actions (UPDATED)
-        // Changed rows from 3 to 4 to accommodate the new button
-        JPanel settingsBox = new JPanel(new GridLayout(4, 1, 5, 5)); 
+        // Box 3: Settings & Actions
+        JPanel settingsBox = new JPanel(new GridLayout(5, 1, 5, 5)); 
         settingsBox.setBorder(BorderFactory.createTitledBorder("Admin Settings"));
         
         JPanel schemePanel = new JPanel(new BorderLayout());
@@ -86,18 +85,19 @@ public class AdminPanel extends JPanel {
         
         JButton refreshBtn = new JButton("Refresh Data");
         refreshBtn.addActionListener(e -> refresh());
+        JButton parkedBtn = new JButton("View Parked Vehicles");
+        parkedBtn.addActionListener(e -> showParkedVehiclesDialog());
+        JButton unpaidBtn = new JButton("View Unpaid Fines");
+        unpaidBtn.addActionListener(e -> showUnpaidFinesDialog());
 
         // Feature 1: Manage Button
         JButton manageBtn = new JButton("Manage Structure");  
         manageBtn.addActionListener(e -> showManagementDialog()); 
 
-        // Feature 4: View Reports Button (NEW)
-        JButton reportBtn = new JButton("View Reports");
-        reportBtn.addActionListener(e -> showReportDialog());
-
         settingsBox.add(schemePanel);
         settingsBox.add(manageBtn); 
-        settingsBox.add(reportBtn); // <--- Added here
+        settingsBox.add(parkedBtn);
+        settingsBox.add(unpaidBtn);
         settingsBox.add(refreshBtn);
 
         top.add(summaryBox);
@@ -196,13 +196,29 @@ public class AdminPanel extends JPanel {
         }
     }
     
-    // Feature 4: Helper to open the report dialog
-    private void showReportDialog() {
-        // Find the parent frame to center the dialog
-        Window parentWindow = SwingUtilities.getWindowAncestor(this);
-        Frame parentFrame = (parentWindow instanceof Frame) ? (Frame) parentWindow : null;
-        
-        ReportDialog dialog = new ReportDialog(parentFrame, adminService);
-        dialog.setVisible(true);
+    private void showParkedVehiclesDialog() {
+        DefaultTableModel model = new DefaultTableModel(
+                new Object[]{"Plate", "Vehicle Type", "Spot ID", "Entry Time"}, 0
+        );
+        for (AdminService.ParkedVehicleInfo info : adminService.getCurrentlyParkedVehicles()) {
+            model.addRow(new Object[]{info.plate, info.vehicleType, info.spotId, info.entryTime});
+        }
+        JTable table = new JTable(model);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setPreferredSize(new Dimension(700, 300));
+        JOptionPane.showMessageDialog(this, scroll, "Vehicles Currently Parked", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showUnpaidFinesDialog() {
+        DefaultTableModel model = new DefaultTableModel(
+                new Object[]{"Plate", "Outstanding Fine (RM)"}, 0
+        );
+        for (AdminService.FineInfo fine : adminService.getOutstandingFinesByPlate()) {
+            model.addRow(new Object[]{fine.plate, String.format("%.2f", fine.unpaidAmount)});
+        }
+        JTable table = new JTable(model);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setPreferredSize(new Dimension(500, 300));
+        JOptionPane.showMessageDialog(this, scroll, "Outstanding Fines", JOptionPane.INFORMATION_MESSAGE);
     }
 }

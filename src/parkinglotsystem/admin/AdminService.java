@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.HashMap; // NEW
 import java.util.List;
 import java.util.Map;     // NEW
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import parkinglotsystem.DatabaseHandler;
 import parkinglotsystem.core.*;
 
@@ -44,6 +47,30 @@ public class AdminService {
         }
     }
     // --------------------------------------
+
+    public static class ParkedVehicleInfo {
+        public final String plate;
+        public final String vehicleType;
+        public final String spotId;
+        public final String entryTime;
+
+        public ParkedVehicleInfo(String plate, String vehicleType, String spotId, String entryTime) {
+            this.plate = plate;
+            this.vehicleType = vehicleType;
+            this.spotId = spotId;
+            this.entryTime = entryTime;
+        }
+    }
+
+    public static class FineInfo {
+        public final String plate;
+        public final double unpaidAmount;
+
+        public FineInfo(String plate, double unpaidAmount) {
+            this.plate = plate;
+            this.unpaidAmount = unpaidAmount;
+        }
+    }
 
     private final ParkingLot parkingLot;
     private final PaymentService paymentService;
@@ -148,6 +175,48 @@ public class AdminService {
             }
         }
         return list;
+    }
+
+    public List<ParkedVehicleInfo> getCurrentlyParkedVehicles() {
+        List<ParkedVehicleInfo> results = new ArrayList<>();
+        String sql = "SELECT t.plate_number, v.vehicle_type, t.spot_id, t.entry_time " +
+                "FROM parking_tickets t JOIN vehicles v ON t.plate_number = v.plate_number " +
+                "WHERE t.status = 'Active' ORDER BY t.entry_time";
+        try (Connection conn = DatabaseHandler.connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                results.add(new ParkedVehicleInfo(
+                        rs.getString("plate_number"),
+                        rs.getString("vehicle_type"),
+                        rs.getString("spot_id"),
+                        rs.getString("entry_time")
+                ));
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading parked vehicles: " + e.getMessage());
+        }
+        return results;
+    }
+
+    public List<FineInfo> getOutstandingFinesByPlate() {
+        List<FineInfo> results = new ArrayList<>();
+        String sql = "SELECT plate_number, SUM(amount) AS total_unpaid " +
+                "FROM parking_fines WHERE status = 'Unpaid' " +
+                "GROUP BY plate_number ORDER BY total_unpaid DESC";
+        try (Connection conn = DatabaseHandler.connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                results.add(new FineInfo(
+                        rs.getString("plate_number"),
+                        rs.getDouble("total_unpaid")
+                ));
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading unpaid fines: " + e.getMessage());
+        }
+        return results;
     }
 
     public void createNewFloor(int floorNumber) {
