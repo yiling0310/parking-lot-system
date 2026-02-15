@@ -176,18 +176,28 @@ public class AdminService {
 
     public List<ParkedVehicleInfo> getCurrentlyParkedVehicles() {
         List<ParkedVehicleInfo> results = new ArrayList<>();
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
         String sql = "SELECT t.plate_number, v.vehicle_type, t.spot_id, t.entry_time " +
                 "FROM parking_tickets t JOIN vehicles v ON t.plate_number = v.plate_number " +
                 "WHERE t.status = 'Active' ORDER BY t.entry_time";
+
         try (Connection conn = DatabaseHandler.connect();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
             while (rs.next()) {
+                java.sql.Timestamp timestamp = rs.getTimestamp("entry_time");
+                String formattedTime = "-";
+                
+                if (timestamp != null) {
+                    formattedTime = timestamp.toLocalDateTime().format(formatter);
+                }
+
                 results.add(new ParkedVehicleInfo(
                         rs.getString("plate_number"),
                         rs.getString("vehicle_type"),
                         rs.getString("spot_id"),
-                        rs.getString("entry_time")
+                        formattedTime
                 ));
             }
         } catch (Exception e) {

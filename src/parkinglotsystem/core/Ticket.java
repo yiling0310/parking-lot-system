@@ -1,6 +1,7 @@
 package parkinglotsystem.core;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class Ticket {
     private final String ticketId;
@@ -10,10 +11,14 @@ public class Ticket {
 
     public Ticket(Vehicle vehicle, ParkingSpot spot) {
         // Generate a random ID (e.g., T-CAR123-Timestamp)
-        this.ticketId = "T-" + vehicle.getLicensePlate() + "-" + System.currentTimeMillis();
+        //this.ticketId = "T-" + vehicle.getLicensePlate() + "-" + System.currentTimeMillis();
         this.vehicle = vehicle;
         this.spot = spot;
         this.entryTime = vehicle.getEntryTime() != null ? vehicle.getEntryTime() : LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("YYYYMMdd-HHmmss");
+        String formattedTime = this.entryTime.format(formatter);
+        
+        this.ticketId = "T-" + vehicle.getLicensePlate() + "-" + formattedTime;
     }
 
     public String getTicketId() { return ticketId; }
