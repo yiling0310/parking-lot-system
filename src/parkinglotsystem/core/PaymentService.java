@@ -90,10 +90,10 @@ public class PaymentService {
                 case FIXED_PENALTY -> overstayFine = FIXED_FINE_AMOUNT;
                 case PROGRESSIVE -> {
                     // Cumulative progressive tiers as specified in assignment Option B.
-                   if (hours > 24) overstayFine += 50.0;
+                    if (hours > 24) overstayFine += 50.0;
                     if (hours > 48) overstayFine += 100.0;
-                    if (hours > 48) overstayFine += 150.0;
-                    if (hours > 72) overstayFine += 200.0; 
+                    if (hours > 72) overstayFine += 150.0;
+                    if (hours > 96) overstayFine += 200.0;
                 }
                 case OVERSTAY_HOURLY -> overstayFine = (hours - OVERSTAY_LIMIT_HOURS) * OVERSTAY_HOURLY_RATE;
                 default -> overstayFine = 0.0;
