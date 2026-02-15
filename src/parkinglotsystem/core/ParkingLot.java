@@ -8,13 +8,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-/**
- * Represents the whole parking lot.
- * Implements the SINGLETON PATTERN to ensure only one parking lot exists.
- */
 public class ParkingLot {
 
-    // 1. The Single Instance
     private static ParkingLot instance;
 
     private final String name;
@@ -30,10 +25,7 @@ public class ParkingLot {
         }
         return allSpots;
     }
-    /**
-     * 2. PRIVATE Constructor.
-     * Prevents other classes from using 'new ParkingLot()'.
-     */
+  
     private ParkingLot(String name) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("name cannot be empty");
@@ -43,10 +35,6 @@ public class ParkingLot {
         this.plateToSpot = new HashMap<>();
     }
 
-    /**
-     * 3. Global Access Point (Factory Method).
-     * If the instance doesn't exist, create it. Otherwise, return the existing one.
-     */
     public static ParkingLot getInstance(String name) {
         if (instance == null) {
             instance = new ParkingLot(name);
@@ -54,15 +42,13 @@ public class ParkingLot {
         return instance;
     }
     
-    // Helper to get the instance if it's already created
+    //Helper to get the instance if it's already created
     public static ParkingLot getInstance() {
         if (instance == null) {
              throw new IllegalStateException("ParkingLot has not been initialized yet!");
         }
         return instance;
     }
-
-    // --- Existing Methods (No Changes Below) ---
 
     public String getName() {
         return name;

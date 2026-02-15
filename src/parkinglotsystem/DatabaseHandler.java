@@ -1,7 +1,7 @@
 package parkinglotsystem;
 
 import java.sql.*;
-import parkinglotsystem.core.*; // Import ALL core classes (Vehicle, Ticket, etc.)
+import parkinglotsystem.core.*;
 
 public class DatabaseHandler {
     private static final String URL = "jdbc:sqlite:parking_system.db";
@@ -17,14 +17,14 @@ public class DatabaseHandler {
     }
 
     public static void createNewTable() {
-        // 1. VEHICLES TABLE
+        //1. VEHICLES TABLE
         String sqlVehicles = "CREATE TABLE IF NOT EXISTS vehicles (\n"
                 + " plate_number text PRIMARY KEY,\n"
                 + " vehicle_type text NOT NULL,\n"
                 + " has_handicapped_card integer DEFAULT 0\n" 
                 + ");";
 
-        // 2. PARKING_SPOTS TABLE
+        //2. PARKING_SPOTS TABLE
         String sqlSpots = "CREATE TABLE IF NOT EXISTS parking_spots (\n"
                 + " spot_id text PRIMARY KEY,\n"
                 + " floor integer NOT NULL,\n"
@@ -34,7 +34,7 @@ public class DatabaseHandler {
                 + " hours_rate real NOT NULL\n"
                 + ");";
 
-        // 3. PARKING_TICKETS TABLE
+        //3. PARKING_TICKETS TABLE
         String sqlTickets = "CREATE TABLE IF NOT EXISTS parking_tickets (\n"
                 + " ticket_id text PRIMARY KEY,\n"
                 + " plate_number text NOT NULL,\n"
@@ -92,7 +92,6 @@ public class DatabaseHandler {
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
         } catch (SQLException ignored) {
-            // Column already exists for existing databases.
         }
     }
 
@@ -261,7 +260,6 @@ public class DatabaseHandler {
         }
     }
 
-    // --- 3. LOAD Active Tickets (Fixed Constructors) ---
     public static void loadActiveTickets(ParkingLot lot) {
         String sql = "SELECT t.ticket_id, t.plate_number, t.spot_id, t.entry_time, " +
                      "v.vehicle_type, v.has_handicapped_card " + 
@@ -320,11 +318,7 @@ public class DatabaseHandler {
         }
     }
 
-    // ==========================================================
-    //  FEATURE 3: NEW METHODS FOR EXIT AND BILLING
-    // ==========================================================
-
-    // 1. Helper: Get Active Ticket ID by Plate (For Billing)
+    //Helper: Get Active Ticket ID by Plate (For Billing)
     public static String getActiveTicketId(String plate) {
         String sql = "SELECT ticket_id FROM parking_tickets WHERE plate_number = ? AND status = 'Active'";
         try (Connection conn = connect();
@@ -372,7 +366,7 @@ public class DatabaseHandler {
         return false;
     }
 
-    // 2. Helper: Get total unpaid fines from PREVIOUS visits
+    //2. Helper: Get total unpaid fines from PREVIOUS visits
     public static double getPreviousUnpaidFines(String plateNumber) {
         String sql = "SELECT SUM(amount) FROM parking_fines WHERE plate_number = ? AND status = 'Unpaid'";
         try (Connection conn = connect();
@@ -388,7 +382,7 @@ public class DatabaseHandler {
         return 0.0;
     }
 
-    // 3. Process Exit: Update ticket and spot after successful payment.
+    //3. Process Exit: Update ticket and spot after successful payment.
     public static void processExit(
             String ticketId,
             String spotId,
@@ -402,12 +396,12 @@ public class DatabaseHandler {
         String updateSpot   = "UPDATE parking_spots SET status = 'Available' WHERE spot_id = ?";
 
         try (Connection conn = connect()) {
-            conn.setAutoCommit(false); // Start Transaction
+            conn.setAutoCommit(false); //Start Transaction
 
             try (PreparedStatement psTicket = conn.prepareStatement(updateTicket);
                  PreparedStatement psSpot   = conn.prepareStatement(updateSpot)) {
 
-                // A. Mark Ticket as Paid
+                //Mark Ticket as Paid
                 psTicket.setDouble(1, fee);
                 psTicket.setString(2, paymentMethod);
                 psTicket.setDouble(3, amountPaid);
@@ -415,11 +409,11 @@ public class DatabaseHandler {
                 psTicket.setString(5, ticketId);
                 psTicket.executeUpdate();
 
-                // B. Free up the Spot
+                //Free up the Spot
                 psSpot.setString(1, spotId);
                 psSpot.executeUpdate();
 
-                conn.commit(); // Commit Transaction
+                conn.commit(); //Commit Transaction
                 System.out.println("Exit processed successfully for Ticket: " + ticketId);
 
             } catch (SQLException e) {
@@ -430,9 +424,7 @@ public class DatabaseHandler {
             System.out.println("Exit Transaction Failed: " + e.getMessage());
         }
     }
-    // ... inside DatabaseHandler.java ...
-
-    // 4. ADMIN: Get Total Revenue from Paid Tickets + Paid Fines
+    //4. ADMIN: Get Total Revenue from Paid Tickets + Paid Fines
     public static double getTotalRevenue() {
         String sqlTickets = "SELECT parking_fee FROM parking_tickets WHERE status = 'Paid'";
         String sqlFines = "SELECT amount FROM parking_fines WHERE status = 'Paid'";
@@ -442,11 +434,11 @@ public class DatabaseHandler {
         try (Connection conn = connect();
              Statement stmt = conn.createStatement()) {
             
-            // Sum Parking Fees
+            //Sum Parking Fees
             ResultSet rs1 = stmt.executeQuery(sqlTickets);
             if (rs1.next()) total += rs1.getDouble(1);
             
-            // Sum Collected Fines
+            //Sum Collected Fines
             ResultSet rs2 = stmt.executeQuery(sqlFines);
             if (rs2.next()) total += rs2.getDouble(1);
             

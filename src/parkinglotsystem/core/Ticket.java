@@ -22,8 +22,6 @@ public class Ticket {
     public String getSpotId() { return spot.getSpotId(); }
     public String getLicensePlate() { return vehicle.getLicensePlate(); }
     public LocalDateTime getEntryTime() { return entryTime; }
-
-    // --- CRITICAL MISSING METHOD ---
     public double getHourlyRate() {
         return spot.getHourlyRate();
     }

@@ -9,8 +9,7 @@ public class ExitPanel extends JPanel {
 
     private final ParkingLot parkingLot;
     private final PaymentService paymentService;
-    
-    // UI Components
+ 
     private final JTextField plateField = new JTextField(15);
     private final JTextArea billArea = new JTextArea(10, 30);
     private final JComboBox<String> paymentMethodCombo = new JComboBox<>(new String[]{
@@ -29,7 +28,7 @@ public class ExitPanel extends JPanel {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // 1. Top Panel: Input
+        //1. Top Panel: Input
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBorder(BorderFactory.createTitledBorder("Vehicle Exit"));
         topPanel.add(new JLabel("License Plate:"));
@@ -38,17 +37,16 @@ public class ExitPanel extends JPanel {
         calcBtn.addActionListener(e -> calculateBill());
         topPanel.add(calcBtn);
 
-        // 2. Center Panel: Bill Display
+        //2. Center Panel: Bill Display
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setBorder(BorderFactory.createTitledBorder("Bill Details"));
         billArea.setFont(new Font("Monospaced", Font.BOLD, 14));
         billArea.setEditable(false);
         centerPanel.add(new JScrollPane(billArea), BorderLayout.CENTER);
 
-        // 3. Bottom Panel: Payment Selection & Action
+        //3. Bottom Panel: Payment Selection & Action
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        
-        // Add the Payment Method Label and Dropdown here
+
         bottomPanel.add(new JLabel("Payment Method:"));
         bottomPanel.add(paymentMethodCombo);
         bottomPanel.add(includePreviousFinesCheck);
@@ -73,7 +71,7 @@ public class ExitPanel extends JPanel {
             return;
         }
 
-        // 1. Find the vehicle in RAM
+        //1. Find the vehicle in RAM
         var spotOpt = parkingLot.findSpotByPlate(plate);
         if (spotOpt.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vehicle not found inside the lot.");
@@ -81,14 +79,13 @@ public class ExitPanel extends JPanel {
         }
 
         ParkingSpot spot = spotOpt.get();
-        // Ensure ParkingSpot.java has the getVehicle() method we fixed earlier!
         Vehicle vehicle = spot.getVehicle(); 
         
-        // 2. Create temporary ticket wrapper
+        //2. Create temporary ticket wrapper
         Ticket tempTicket = new Ticket(vehicle, spot); 
 
         try {
-            // 3. Generate Bill (This fetches the REAL Ticket ID from DB)
+            //3. Generate Bill (This fetches the REAL Ticket ID from DB)
             currentBill = paymentService.generateBill(tempTicket);
             displayBill(currentBill);
             payButton.setEnabled(true);

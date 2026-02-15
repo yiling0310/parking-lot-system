@@ -13,18 +13,17 @@ public class AdminPanel extends JPanel {
 
     private final AdminService adminService;
 
-    // UI Components
     private final JLabel summaryLabel = new JLabel("-");
     private final JLabel revenueLabel = new JLabel("RM 0.00"); 
     private final JLabel finesLabel = new JLabel("Unpaid Fines: RM 0.00");
     private final JComboBox<FineType> fineSchemeCombo = new JComboBox<>(FineType.values()); 
-    
     private final JTextArea floorArea = new JTextArea(6, 30);
 
     private final DefaultTableModel spotModel = new DefaultTableModel(
             new Object[]{"Floor", "Spot ID", "Type", "Status", "Vehicle Plate", "Rate (RM/hr)"},
             0
     );
+
     private final JTable spotTable = new JTable(spotModel);
 
     public AdminPanel(AdminService adminService) {
@@ -37,7 +36,7 @@ public class AdminPanel extends JPanel {
         floorArea.setEditable(false);
         spotTable.setFillsViewportHeight(true);
 
-        // Initialize Fine Scheme Selection
+        //Initialize Fine Scheme Selection
         fineSchemeCombo.setSelectedItem(adminService.getCurrentFineScheme());
         fineSchemeCombo.addActionListener(e -> {
             FineType selected = (FineType) fineSchemeCombo.getSelectedItem();
@@ -55,21 +54,19 @@ public class AdminPanel extends JPanel {
     private JComponent buildTop() {
         JPanel top = new JPanel(new GridLayout(1, 3, 10, 0));
 
-        // Box 1: General Summary
+        //Box 1: General Summary
         JPanel summaryBox = new JPanel(new BorderLayout(8, 8));
         summaryBox.setBorder(BorderFactory.createTitledBorder("Occupancy Summary"));
         summaryBox.add(summaryLabel, BorderLayout.CENTER);
 
-        // Box 2: Financials 
+        //Box 2: Financials 
         JPanel financeBox = new JPanel(new GridLayout(2, 1, 5, 5)); 
         financeBox.setBorder(BorderFactory.createTitledBorder("Financials")); 
         
-        // Style the Revenue Label
         revenueLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
         revenueLabel.setForeground(new Color(0, 100, 0)); // Green
         revenueLabel.setBorder(BorderFactory.createTitledBorder("Total Revenue")); 
         
-        // Style the Fines Label
         finesLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         finesLabel.setForeground(Color.RED); // Red for debt
         finesLabel.setBorder(BorderFactory.createTitledBorder("Unpaid Fines")); 
@@ -77,7 +74,7 @@ public class AdminPanel extends JPanel {
         financeBox.add(revenueLabel); 
         financeBox.add(finesLabel);   
 
-        // Box 3: Settings & Actions
+        //Box 3: Settings & Actions
         JPanel settingsBox = new JPanel(new GridLayout(5, 1, 5, 5)); 
         settingsBox.setBorder(BorderFactory.createTitledBorder("Admin Settings"));
         
@@ -93,7 +90,7 @@ public class AdminPanel extends JPanel {
         JButton unpaidBtn = new JButton("View Unpaid Fines");
         unpaidBtn.addActionListener(e -> showUnpaidFinesDialog());
 
-        // Feature 1: Manage Button
+        //Feature 1: Manage Button
         JButton manageBtn = new JButton("Manage Structure");  
         manageBtn.addActionListener(e -> showManagementDialog()); 
 
@@ -127,22 +124,22 @@ public class AdminPanel extends JPanel {
     }
 
     public final void refresh() {
-        // 1. Update Summary Text
+        //1. Update Summary Text
        summaryLabel.setText(adminService.getSummary());
 
-        // 2. Update Revenue 
+        //2. Update Revenue 
         revenueLabel.setText(adminService.getTotalRevenueString());
 
-        // 3. Update Fines 
+        //3. Update Fines 
         finesLabel.setText(adminService.getTotalUnpaidFinesString());
 
-        // 3. Floor occupancy
+        //4. Floor occupancy
         List<String> lines = adminService.getFloorOccupancyLines();
         StringBuilder sb = new StringBuilder();
         for (String line : lines) sb.append(line).append("\n");
         floorArea.setText(sb.toString());
 
-        // 4. Spot table
+        //5. Spot table
         spotModel.setRowCount(0);
         for (AdminService.SpotInfo info : adminService.getAllSpotInfos()) {
             spotModel.addRow(new Object[]{
@@ -163,14 +160,17 @@ public class AdminPanel extends JPanel {
                 null, options, options[0]);
 
         try {
-            if (choice == 0) { // Add Floor
+            //Add Floor
+            if (choice == 0) { 
                 String input = JOptionPane.showInputDialog("Enter New Floor Number:");
                 if (input != null) {
                     adminService.createNewFloor(Integer.parseInt(input));
                     refresh();
                     JOptionPane.showMessageDialog(this, "Floor added successfully!");
                 }
-            } else if (choice == 1) { // Add Row
+            } 
+            //Add Row
+            else if (choice == 1) { 
                 String floorStr = JOptionPane.showInputDialog("Enter Floor Number:");
                 String rowStr = JOptionPane.showInputDialog("Enter New Row Number:");
                 if (floorStr != null && rowStr != null) {
@@ -178,17 +178,19 @@ public class AdminPanel extends JPanel {
                     refresh();
                     JOptionPane.showMessageDialog(this, "Row added successfully!");
                 }
-            } else if (choice == 2) { // Add Spot
+            } 
+            //Add Spot
+            else if (choice == 2) { 
                 String floorStr = JOptionPane.showInputDialog("Enter Floor Number:");
                 String rowStr = JOptionPane.showInputDialog("Enter Row Number:");
                 String spotId = JOptionPane.showInputDialog("Enter Spot ID (e.g., 1-A):");
                 
-                // Dropdown for Spot Type
+                //Dropdown for Spot Type
                 SpotType type = (SpotType) JOptionPane.showInputDialog(this, "Select Type", "Type", 
                         JOptionPane.QUESTION_MESSAGE, null, SpotType.values(), SpotType.REGULAR);
                 
                 if (floorStr != null && rowStr != null && spotId != null && type != null) {
-                     // Default rate 5.0
+                     //Default rate 5.0
                      adminService.createNewSpot(Integer.parseInt(floorStr), Integer.parseInt(rowStr), spotId, type, 5.0); 
                      refresh();
                      JOptionPane.showMessageDialog(this, "Spot added successfully!");

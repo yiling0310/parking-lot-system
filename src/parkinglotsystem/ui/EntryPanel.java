@@ -10,7 +10,6 @@ public class EntryPanel extends JPanel {
 
     private final EntryExitService entryService;
 
-    // UI Components
     private final JTextField plateField = new JTextField(15);
     private final JComboBox<VehicleType> typeCombo = new JComboBox<>(VehicleType.values());
     private final JCheckBox reservedOnly = new JCheckBox("Show Reserved Spots Only");
@@ -26,7 +25,7 @@ public class EntryPanel extends JPanel {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // 1. Top Panel: Vehicle Details
+        //1. Top Panel: Vehicle Details
         JPanel inputPanel = new JPanel(new GridLayout(6, 2, 5, 5));
         inputPanel.setBorder(BorderFactory.createTitledBorder("Vehicle Entry"));
 
@@ -50,7 +49,7 @@ public class EntryPanel extends JPanel {
         inputPanel.add(new JLabel("Action:"));
         inputPanel.add(findBtn);
 
-        // 2. Center Panel: Select Spot
+        //2. Center Panel: Select Spot
         JPanel selectionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         selectionPanel.setBorder(BorderFactory.createTitledBorder("Select Parking Spot"));
         selectionPanel.add(new JLabel("Available Spots:"));
@@ -60,14 +59,13 @@ public class EntryPanel extends JPanel {
         parkButton.addActionListener(e -> parkVehicle());
         selectionPanel.add(parkButton);
 
-        // 3. Bottom Panel: Ticket Output
+        //3. Bottom Panel: Ticket Output
         JPanel ticketPanel = new JPanel(new BorderLayout());
         ticketPanel.setBorder(BorderFactory.createTitledBorder("Parking Ticket"));
         ticketArea.setEditable(false);
         ticketArea.setFont(new Font("Monospaced", Font.BOLD, 14));
         ticketPanel.add(new JScrollPane(ticketArea), BorderLayout.CENTER);
 
-        // Assemble
         JPanel topContainer = new JPanel(new BorderLayout());
         topContainer.add(inputPanel, BorderLayout.NORTH);
         topContainer.add(selectionPanel, BorderLayout.CENTER);
@@ -88,7 +86,6 @@ public class EntryPanel extends JPanel {
             VehicleType type = (VehicleType) typeCombo.getSelectedItem();
             Vehicle tempVehicle;
 
-            // FIX: Pass 'hasCard' to ALL constructors, not just HandicappedVehicle
             switch (type) {
                 case CAR -> tempVehicle = new Car(plate, hasCard);
                 case MOTORCYCLE -> tempVehicle = new Motorcycle(plate, hasCard);
@@ -147,7 +144,7 @@ public class EntryPanel extends JPanel {
             String spotId = selectedText.split(" ")[0];
 
             Vehicle vehicle;
-            // FIX: Pass 'hasCard' to ALL constructors here as well
+
             switch (type) {
                 case CAR -> vehicle = new Car(plate, hasCard);
                 case MOTORCYCLE -> vehicle = new Motorcycle(plate, hasCard);
@@ -156,12 +153,12 @@ public class EntryPanel extends JPanel {
                 default -> throw new IllegalStateException("Unexpected value: " + type);
             }
 
-            // ATTEMPT TO PARK with specific error handling
+            //ATTEMPT TO PARK with specific error handling
             try {
-                // This call now handles both the internal logic and Database saving
+                //Handles both the internal logic and Database saving
                 Ticket ticket = entryService.parkVehicle(spotId, vehicle, hasReservation);
 
-                // If successful, display the Ticket details
+                //If successful, display the Ticket details
                 DateTimeFormatter entryTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                 String formattedTime = ticket.getEntryTime().format(entryTimeFormat);
 
@@ -178,17 +175,16 @@ public class EntryPanel extends JPanel {
 
                 JOptionPane.showMessageDialog(this, "Vehicle successfully parked in spot: " + spotId);
 
-                // Reset UI for next entry
                 plateField.setText("");
                 vipReservationCheck.setSelected(false);
                 spotCombo.removeAllItems();
                 parkButton.setEnabled(false);
 
             } catch (IllegalArgumentException ex) {
-                // Catches "Vehicle already parked!" or spot mismatch errors
+                //Catches "Vehicle already parked!" or spot mismatch errors
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Entry Error", JOptionPane.ERROR_MESSAGE);
             } catch (Exception ex) {
-                // Catch any other unexpected system errors
+                //Catch any other unexpected system errors
                 JOptionPane.showMessageDialog(this, "System Error: " + ex.getMessage(), "System Error", JOptionPane.ERROR_MESSAGE);
                 ex.printStackTrace();
             }

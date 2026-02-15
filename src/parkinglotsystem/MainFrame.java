@@ -2,10 +2,10 @@ package parkinglotsystem;
 
 import javax.swing.*;
 import parkinglotsystem.admin.AdminService;
-import parkinglotsystem.core.*; // Import ALL core classes (needed for SpotType/Initializer)
+import parkinglotsystem.core.*; 
 import parkinglotsystem.ui.AdminPanel;
 import parkinglotsystem.ui.EntryPanel;
-import parkinglotsystem.ui.ExitPanel; // Make sure EntryPanel is imported!
+import parkinglotsystem.ui.ExitPanel;
 import parkinglotsystem.ui.ReportingPanel;
 
 public class MainFrame extends JFrame {
@@ -20,8 +20,7 @@ public class MainFrame extends JFrame {
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Admin Dashboard", new AdminPanel(admin));
-        
-        // Add Entry Tab (This was missing in your uploaded file!)
+   
         tabs.addTab("Vehicle Entry", new EntryPanel(entry));
         
         tabs.addTab("Vehicle Exit & Payment", new ExitPanel(lot, payment));
@@ -33,7 +32,7 @@ public class MainFrame extends JFrame {
   public static void main(String[] args) {
         DatabaseHandler.createNewTable();
 
-        // 1. Initialize Lot & Pattern
+        //1. Initialize Lot & Pattern
         SpotType[] pattern = new SpotType[]{
             SpotType.REGULAR, SpotType.REGULAR, SpotType.REGULAR,
             SpotType.COMPACT,
@@ -44,20 +43,17 @@ public class MainFrame extends JFrame {
             "University Parking", 5, 3, 10, pattern
         );
 
-        // 2. Load Data from Database (ORDER MATTERS!)
-        DatabaseHandler.initializeSpots(lot);     // A. Create/Save default spots to DB
-        DatabaseHandler.loadSpotsFromDB(lot);     // B. Load any custom spots from DB
-        
-        // --- ADD THIS LINE ---
-        DatabaseHandler.loadActiveTickets(lot);   // C. Put the cars back in the spots!
-        // ---------------------
+        //2. Load Data from Database
+        DatabaseHandler.initializeSpots(lot);   
+        DatabaseHandler.loadSpotsFromDB(lot);     
+        DatabaseHandler.loadActiveTickets(lot);
 
-        // 3. Create Services
+        //3. Create Services
         PaymentService payment = new PaymentService(); 
         EntryExitService entry = new EntryExitService(lot, payment);
         AdminService admin = new AdminService(lot, payment);
 
-        // 4. Launch GUI
+        //4. Launch GUI
         SwingUtilities.invokeLater(() ->
             new MainFrame(lot, admin, entry, payment).setVisible(true)
         );

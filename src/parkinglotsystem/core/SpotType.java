@@ -3,11 +3,8 @@ package parkinglotsystem.core;
 public enum SpotType {
 
     COMPACT(2.0),
-
     REGULAR(5.0),
-
     HANDICAPPED(2.0),
-
     RESERVED(10.0);
 
     private final double baseRate;
@@ -24,14 +21,14 @@ public enum SpotType {
 
         boolean isHandicappedVehicle = (v instanceof HandicappedVehicle);
         boolean hasCard = v.isHandicappedCardHolder();
-        // Check special condition for handicapped drivers
+        //Check special condition for handicapped drivers
         if (hasCard) {
             if (this == HANDICAPPED) {
                 return 0.0; 
             }
                 return 2.0; 
         }
-        // If a handicapped vehicle parks in REGULAR or COMPACT without a card
+        //If a handicapped vehicle parks in REGULAR or COMPACT without a card
         if (isHandicappedVehicle) {
             if (this == HANDICAPPED) {
                 return 2.0;
@@ -39,7 +36,7 @@ public enum SpotType {
             return this.baseRate; 
         }
 
-        // Otherwise, return normal base rate
+        //Otherwise, return normal base rate
         return baseRate;
     }
 }

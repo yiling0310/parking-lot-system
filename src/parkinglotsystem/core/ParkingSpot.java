@@ -55,16 +55,11 @@ public class ParkingSpot {
         };
     }
 
-    // This is the getter your AdminService needs!
+    //Getter for adminservice to check parked vehicle
     public Vehicle getVehicle() {
         return currentVehicle;
     }
     
-    // Alias if needed by older code
-    public Vehicle getCurrentVehicle() {
-        return currentVehicle;
-    }
-
     public boolean isAvailable() {
         return currentVehicle == null;
     }

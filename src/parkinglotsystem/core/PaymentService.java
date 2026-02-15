@@ -7,10 +7,9 @@ import parkinglotsystem.DatabaseHandler;
 
 public class PaymentService {
 
-    // Default to FIXED_PENALTY as per Feature 3 requirements
     private FineType currentFineScheme;
     private static final double FIXED_FINE_AMOUNT = 50.0;
-    private static final double MISUSE_FINE_AMOUNT = 100.0; // Fine for reserved-spot misuse
+    private static final double MISUSE_FINE_AMOUNT = 100.0;
     private static final long OVERSTAY_LIMIT_HOURS = 24;
     private static final double OVERSTAY_HOURLY_RATE = 20.0;
 
@@ -23,7 +22,6 @@ public class PaymentService {
         }
     }
 
-    // --- METHODS FOR ADMIN PANEL UI ---
     public void setFineScheme(FineType type) {
         this.currentFineScheme = type;
         System.out.println("Fine Scheme updated to: " + type);
@@ -37,7 +35,6 @@ public class PaymentService {
     public double getTotalRevenue() {
         return DatabaseHandler.getTotalRevenue();
     }
-    // ----------------------------------
 
     public Bill generateBill(Ticket tempTicket) {
         if (tempTicket == null) throw new IllegalArgumentException("Ticket cannot be null");
@@ -48,7 +45,7 @@ public class PaymentService {
         if (realTicketId == null) {
             throw new IllegalStateException("No active ticket found in database for plate: " + plate);
         }
-
+         // Calculate parking duration
         LocalDateTime entry = tempTicket.getEntryTime();
         LocalDateTime exit = LocalDateTime.now();
         Duration duration = Duration.between(entry, exit);
@@ -78,10 +75,10 @@ public class PaymentService {
         else {
             rate = sType.hourlyRateFor(vehicle);
         }
-
+        //Calculate base parking fee
         double parkingFee = hours * rate;
 
-        // 2. Calculate Overstay Fine
+        //Calculate Overstay Fine
         FineType appliedFineScheme = DatabaseHandler.getFineSchemeByTicketId(realTicketId);
 
         double overstayFine = 0.0;
@@ -89,7 +86,6 @@ public class PaymentService {
             switch (appliedFineScheme) {
                 case FIXED_PENALTY -> overstayFine = FIXED_FINE_AMOUNT;
                 case PROGRESSIVE -> {
-                    // Cumulative progressive tiers as specified in assignment Option B.
                     if (hours > 0) overstayFine += 50.0;
                     if (hours > 24) overstayFine += 100.0;
                     if (hours > 48) overstayFine += 150.0;
@@ -100,17 +96,17 @@ public class PaymentService {
             }
         }
 
-        // 3. Calculate Misuse Fine (reserved spot without VIP reservation).
+        //Calculate Misuse Fine
         double misuseFine = 0.0;
         boolean hasReservation = DatabaseHandler.hasReservationByTicketId(realTicketId);
         if (tempTicket.getSpot().getSpotType() == SpotType.RESERVED && !hasReservation) {
             misuseFine = MISUSE_FINE_AMOUNT;
         }
 
-        // 4. Fetch Previous Unpaid Fines
+        //Fetch Previous Unpaid Fines
         double previousFines = DatabaseHandler.getPreviousUnpaidFines(plate);
         
-        // 5. Total Amount
+        //Total Amount
         double mandatoryAmount = parkingFee;
         double total = mandatoryAmount + previousFines;
         total += overstayFine + misuseFine;
@@ -145,7 +141,7 @@ public class PaymentService {
             throw new IllegalArgumentException("Amount paid must at least cover parking fee.");
         }
 
-        // Store newly incurred fines first; they can remain unpaid or be settled during this payment.
+        //Store newly incurred fines first; they can remain unpaid or be settled during this payment.
         double totalNewFines = bill.overstayFine() + bill.misuseFine();
         if (totalNewFines > 0) {
             DatabaseHandler.addFineRecord(bill.plateNumber(), totalNewFines, "Unpaid");

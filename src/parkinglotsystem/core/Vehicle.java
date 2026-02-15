@@ -2,10 +2,6 @@ package parkinglotsystem.core;
 
 import java.time.LocalDateTime;
 
-/**
- * Abstract base class for all vehicles.
- * Implements the Inheritance requirement from Assignment Section 2.
- */
 public abstract class Vehicle {
 
     private final String licensePlate;
@@ -14,10 +10,7 @@ public abstract class Vehicle {
 
     private LocalDateTime entryTime;
     private LocalDateTime exitTime;
-
-    /**
-     * Protected constructor. Can only be called by Car, Motorcycle, etc.
-     */
+    
     protected Vehicle(String licensePlate, VehicleType vehicleType, boolean handicappedCardHolder) {
         if (licensePlate == null || licensePlate.isBlank()) {
             throw new IllegalArgumentException("licensePlate cannot be empty");

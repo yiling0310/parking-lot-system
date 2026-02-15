@@ -1,9 +1,9 @@
 package parkinglotsystem.admin;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement; // NEW
+import java.sql.PreparedStatement; 
 import java.sql.ResultSet;
-import java.util.ArrayList;     // NEW
+import java.util.ArrayList;  
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +30,7 @@ public class AdminService {
         }
     }
 
-    // --- NEW: Data Structure for Report ---
+    //Data Structure for Report
     public static class TypeStat {
         public final String typeName;
         public final int total;
@@ -46,7 +46,6 @@ public class AdminService {
             return (total == 0) ? 0.0 : (double) occupied / total;
         }
     }
-    // --------------------------------------
 
     public static class ParkedVehicleInfo {
         public final String plate;
@@ -82,7 +81,7 @@ public class AdminService {
         this.paymentService = paymentService;
     }
 
-    // --- REVENUE & FINE METHODS (Required by your UI) ---
+    //REVENUE & FINE METHODS FOR ADMIN PANEL
     public String getTotalRevenueString() {
         return String.format("RM %.2f", paymentService.getTotalRevenue());
     }
@@ -99,33 +98,32 @@ public class AdminService {
         double total = DatabaseHandler.getTotalUnpaidFines();
         return String.format("RM %.2f", total);
     }
-    // --------------------------------------------------
 
-    // --- NEW: Logic for Reporting (Occupancy by Type) ---
+    //Logic for Reporting (Occupancy by Type)
     public Map<String, TypeStat> getOccupancyBySpotType() {
         Map<String, int[]> counts = new HashMap<>();
 
-        // 1. Initialize counters for all known types
+        //1. Initialize counters for all known types
         for (SpotType type : SpotType.values()) {
-            counts.put(type.name(), new int[]{0, 0}); // {Total, Occupied}
+            counts.put(type.name(), new int[]{0, 0}); 
         }
 
-        // 2. Scan every spot in the lot
+        //2. Scan every spot in the lot
         for (Floor floor : parkingLot.getFloors()) {
             for (ParkingSpot spot : floor.getSpots()) {
                 String tName = spot.getSpotType().name();
                 
-                // Increment Total
+                //Increment Total
                 counts.get(tName)[0]++;
                 
-                // Increment Occupied if not available
+                //Increment Occupied if not available
                 if (!spot.isAvailable()) {
                     counts.get(tName)[1]++;
                 }
             }
         }
 
-        // 3. Convert to Result Map
+        //3. Convert to Result Map
         Map<String, TypeStat> results = new HashMap<>();
         for (Map.Entry<String, int[]> entry : counts.entrySet()) {
             results.put(entry.getKey(), new TypeStat(
@@ -136,7 +134,6 @@ public class AdminService {
         }
         return results;
     }
-    // ----------------------------------------------------
 
     public String getSummary() {
         return parkingLot.getStatusSummary();

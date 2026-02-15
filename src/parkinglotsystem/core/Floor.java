@@ -8,14 +8,13 @@ public class Floor {
 
     private final int floorNumber;
     private final List<Row> rows = new ArrayList<>(); 
-    // This is the ONLY list for admin-added spots
     private final List<ParkingSpot> directSpots = new ArrayList<>(); 
 
     public Floor(int floorNumber) {
         this.floorNumber = floorNumber;
     }
 
-    // Add a spot directly (Admin feature)
+    //Add spot
     public void addSpot(ParkingSpot spot) {
         if (spot == null) return;
         directSpots.add(spot);
@@ -47,11 +46,11 @@ public class Floor {
     public List<ParkingSpot> getSpots() {
         List<ParkingSpot> all = new ArrayList<>();
         
-        // 1. Get spots from Rows
+        //1. Get spots from Rows
         for (Row r : rows) {
             all.addAll(r.getSpots());
         }
-        // 2. Get spots added directly
+        //2. Get spots added directly
         all.addAll(directSpots);
 
         return Collections.unmodifiableList(all);
@@ -60,7 +59,7 @@ public class Floor {
     public int getTotalSpots() {
         int total = 0;
         for (Row r : rows) total += r.getTotalSpots();
-        total += directSpots.size(); // Add direct spots
+        total += directSpots.size(); //Add direct spots
         return total;
     }
 

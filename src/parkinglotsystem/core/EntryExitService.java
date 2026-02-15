@@ -13,9 +13,6 @@ public class EntryExitService {
         this.paymentService = paymentService;
     }
 
-    /**
-     * Requirement: "The system shows available spots of suitable types"
-     */
     public List<ParkingSpot> findAvailableSpotsFor(Vehicle vehicle) {
         List<ParkingSpot> suitableSpots = new ArrayList<>();
         
@@ -29,27 +26,23 @@ public class EntryExitService {
         return suitableSpots;
     }
 
-    /**
-     * Core Logic: Validates if a specific vehicle type can park in a specific spot type.
-     * UPDATED: Strict rules to ensure Handicapped vehicles get Free Parking.
-     */
     public boolean isSpotSuitable(ParkingSpot spot, Vehicle vehicle) {
         SpotType sType = spot.getSpotType();
         VehicleType vType = vehicle.getVehicleType();
 
-        // Rule 1: HANDICAPPED Vehicles can park in any spot.
+        //Rule 1: HANDICAPPED Vehicles can park in any spot.
         if (vType == VehicleType.HANDICAPPED) {
             return true;
         }
 
-        // Rule 2: Reserved spots validation
-        // Reserved spots are selectable for non-handicapped vehicle types.
-        // Misuse fines, if applicable, are handled during billing.
+        //Rule 2: Reserved spots validation
+        //Reserved spots are selectable for non-handicapped vehicle types.
+        //Misuse fines, if applicable, are handled during billing.
         if (sType == SpotType.RESERVED) {
             return vType != VehicleType.HANDICAPPED;
         }
 
-        // Rule 3: Standard Vehicles (Car, Moto, SUV)
+        //Rule 3: Standard Vehicles (Car, Moto, SUV)
         return switch (vType) {
             case MOTORCYCLE -> sType == SpotType.COMPACT;
             case CAR -> sType == SpotType.COMPACT || sType == SpotType.REGULAR;
@@ -58,39 +51,36 @@ public class EntryExitService {
         }; 
     }
 
-    /**
-     * Process Entry: Validates, Parks, and Generates Ticket.
-     */
+    //Process Entry: Validates, Parks, and Generates Ticket.
     public Ticket parkVehicle(String spotId, Vehicle vehicle, boolean hasReservation) {
         if (parkingLot.findSpotByPlate(vehicle.getLicensePlate()).isPresent()) {
             throw new IllegalArgumentException("Vehicle with plate " + vehicle.getLicensePlate() + " is already parked!");
         }
         
-        // 1. Find the spot object
+        //1. Find the spot object
         ParkingSpot spot = findSpotById(spotId);
         
-        // 2. Double-check validation
+        //2. Double-check validation
         if (!isSpotSuitable(spot, vehicle)) {
             throw new IllegalArgumentException("This vehicle type cannot park in this spot.");
         }
 
-        // 3. Occupy the spot (This sets the vehicle into the spot)
+        //3. Occupy the spot
         parkingLot.allocateSpot(spot, vehicle);
         
-        // 4. Record Entry Time on Vehicle
+        //4. Record Entry Time on Vehicle
         vehicle.setEntryTime(java.time.LocalDateTime.now());
 
-        // 5. Generate Ticket
+        //5. Generate Ticket
         Ticket ticket = new Ticket(vehicle, spot);
 
-        // Snapshot fine scheme at entry, so future scheme changes do not affect this ticket.
+        //Save to database with current fine scheme and reservation status
         parkinglotsystem.DatabaseHandler.saveTicket(ticket, paymentService.getCurrentFineScheme(), hasReservation);
-        // ----------------------------------------------------------------
 
         return ticket;
     }
     
-    // Helper to find a spot object by its String ID
+    //Helper to find a spot object by its String ID
     private ParkingSpot findSpotById(String spotId) {
         for (Floor f : parkingLot.getFloors()) {
             for (ParkingSpot s : f.getSpots()) {
